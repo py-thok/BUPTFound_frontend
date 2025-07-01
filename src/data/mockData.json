@@ -1,0 +1,182 @@
+{
+  "items": [
+    {
+      "id": 1,
+      "title": "黑色钱包",
+      "description": "在图书馆3楼发现的黑色皮质钱包，内有身份证和银行卡",
+      "type": "found",
+      "status": "resolved",
+      "location": "图书馆3楼",
+      "contact": "13800138001",
+      "date": "2024-01-15",
+      "image": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=300&h=200&fit=crop",
+      "userId": 101,
+      "userName": "张三",
+      "userAvatar": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face",
+      "createdAt": "2024-01-15 14:30:00",
+      "preciseLocation": {
+        "lat": 39.963422,
+        "lng": 116.356984
+      }
+    },
+    {
+      "id": 2,
+      "title": "蓝色保温杯",
+      "description": "我丢失了一个蓝色的保温杯，上面有卡通贴纸",
+      "type": "lost",
+      "location": "食堂二楼",
+      "contact": "13900139002",
+      "date": "2024-01-14",
+      "image": "https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=300&h=200&fit=crop",
+      "userId": 102,
+      "userName": "李四",
+      "userAvatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
+      "createdAt": "2024-01-14 10:20:00",
+      "preciseLocation": {
+        "lat": 39.964512,
+        "lng": 116.358234
+      }
+    },
+    {
+      "id": 3,
+      "title": "红色背包",
+      "description": "在篮球场丢失的红色运动背包，里面有课本和笔记",
+      "type": "lost",
+      "location": "篮球场",
+      "contact": "13700137003",
+      "date": "2024-01-13",
+      "image": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=300&h=200&fit=crop",
+      "userId": 103,
+      "userName": "王五",
+      "userAvatar": "https://images.unsplash.com/photo-1494790108755-2616b612b5bc?w=100&h=100&fit=crop&crop=face",
+      "createdAt": "2024-01-13 16:45:00"
+    },
+    {
+      "id": 4,
+      "title": "iPhone 14",
+      "description": "在教学楼A座发现的黑色iPhone 14，有蓝色手机壳",
+      "type": "found",
+      "status": "resolved",
+      "location": "教学楼A座2楼",
+      "contact": "13600136004",
+      "date": "2024-01-12",
+      "image": "https://images.unsplash.com/photo-1512499617640-c74ae3a79d37?w=300&h=200&fit=crop",
+      "userId": 104,
+      "userName": "赵六",
+      "userAvatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face",
+      "createdAt": "2024-01-12 09:15:00",
+      "preciseLocation": {
+        "lat": 39.962845,
+        "lng": 116.354127
+      }
+    },
+    {
+      "id": 5,
+      "title": "白色耳机",
+      "description": "丢失了一副白色的无线耳机，包装盒上有名字",
+      "type": "lost",
+      "location": "图书馆1楼",
+      "contact": "13500135005",
+      "date": "2024-01-11",
+      "image": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=200&fit=crop",
+      "userId": 105,
+      "userName": "钱七",
+      "userAvatar": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face",
+      "createdAt": "2024-01-11 13:25:00"
+    },
+    {
+      "id": 6,
+      "title": "学生卡",
+      "description": "在食堂发现的学生卡，卡号为202112345",
+      "type": "found",
+      "location": "食堂三楼",
+      "contact": "13400134006",
+      "date": "2024-01-10",
+      "image": "https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=300&h=200&fit=crop",
+      "userId": 106,
+      "userName": "孙八",
+      "userAvatar": "https://images.unsplash.com/photo-1463453091185-61582044d556?w=100&h=100&fit=crop&crop=face",
+      "createdAt": "2024-01-10 11:40:00",
+      "preciseLocation": {
+        "lat": 39.965123,
+        "lng": 116.359456
+      }
+    },
+    {
+      "id": 7,
+      "title": "蓝色文件夹",
+      "description": "在实验楼发现的蓝色文件夹，里面有重要文件",
+      "type": "found",
+      "location": "实验楼2楼",
+      "contact": "testuser",
+      "date": "2024-01-16",
+      "image": "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300&h=200&fit=crop",
+      "userId": 999,
+      "userName": "测试用户",
+      "userAvatar": "/src/assets/yangtuo.jpg",
+      "createdAt": "2024-01-16 15:20:00",
+      "preciseLocation": {
+        "lat": 39.963890,
+        "lng": 116.357234
+      }
+    },
+    {
+      "id": 8,
+      "title": "黑色笔记本电脑",
+      "description": "寻找遗失的黑色联想笔记本电脑，型号ThinkPad",
+      "type": "lost",
+      "location": "图书馆5楼",
+      "contact": "testuser",
+      "date": "2024-01-15",
+      "image": "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=300&h=200&fit=crop",
+      "userId": 999,
+      "userName": "测试用户",
+      "userAvatar": "/src/assets/yangtuo.jpg",
+      "createdAt": "2024-01-15 09:30:00"
+    }
+  ],
+  "users": [
+    {
+      "id": 101,
+      "name": "张三",
+      "username": "zhangsan",
+      "avatar": ""
+    },
+    {
+      "id": 102,
+      "name": "李四",
+      "username": "lisi",
+      "avatar": ""
+    },
+    {
+      "id": 103,
+      "name": "王五",
+      "username": "wangwu",
+      "avatar": ""
+    },
+    {
+      "id": 104,
+      "name": "赵六",
+      "username": "zhaoliu",
+      "avatar": ""
+    },
+    {
+      "id": 105,
+      "name": "钱七",
+      "username": "qianqi",
+      "avatar": ""
+    },
+    {
+      "id": 106,
+      "name": "孙八",
+      "username": "sunba",
+      "avatar": ""
+    },
+    {
+      "id": 999,
+      "name": "测试用户",
+      "username": "testuser",
+      "avatar": "/src/assets/yangtuo.jpg"
+    }
+  ]
+} 
