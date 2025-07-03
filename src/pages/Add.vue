@@ -1,340 +1,603 @@
 ﻿<script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Search, Heart, LocateIcon, Upload, X } from 'lucide-vue-next'
-import { isLoggedIn, initializeAuth, items, currentUser } from '@/stores/user'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Search, Heart, Upload, MapPin, ArrowLeft } from 'lucide-vue-next'
+import { isLoggedIn, initializeAuth } from '@/stores/user'
+import { createItem, updateItem, getItemById, type CreateItemRequest } from '@/stores/items'
+import { MAP_CONFIG, loadTMapAPI, type LocationData } from '@/config/map'
 import AppNavbar from '@/components/AppNavbar.vue'
-import MapPicker from '@/components/MapPicker.vue'
-import type { LocationData } from '@/config/map'
 
 const router = useRouter()
+const route = useRoute()
 
+// 编辑模式相关状态
+const isEditMode = ref(false)
+const editItemId = ref<number | null>(null)
+const isLoadingItem = ref(false)
+
+// 表单数据
 const form = ref({
   type: '' as 'found' | 'lost' | '',
   title: '',
   description: '',
-  location: '',
-  contact: '',
-  image: ''
+  site: '', // 地点名称（如图书馆、食堂等）
+  image: '', // 图片预览URL
+  imageFile: null as File | null, // 实际上传的文件
+  location: null as LocationData | null, // 精确位置的经纬度
+  status: 'active' as 'active' | 'resolved' // 物品状态
 })
 
-// 精确定位相关状态
-const preciseLocation = ref<LocationData | null>(null)
-const showMapPicker = ref(false)
-const isLocationSelected = ref(false)
+// 状态管理
+const isSubmitting = ref(false)
 
-// 图片上传相关状态
-const imageFile = ref<File | null>(null)
-const imagePreview = ref<string>('')
-const uploadError = ref('')
+// 地图相关
+const showLocationPicker = ref(false)
+const mapContainer = ref<HTMLDivElement>()
+const isMapLoading = ref(false)
+const mapError = ref('')
+let map: any = null
+let marker: any = null
 
-// 精确定位功能
-const openLocationPicker = () => {
-  showMapPicker.value = true
-}
-
-// 处理地图选点结果 - 只保存位置信息，不填入地点
-const handleLocationSelect = (location: LocationData) => {
-  preciseLocation.value = location
-  isLocationSelected.value = true
-}
-
-// 图片上传处理
-const handleImageUpload = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const file = target.files?.[0]
-  
-  if (!file) return
-  
-  // 重置错误信息
-  uploadError.value = ''
-  
-  // 检查文件类型
-  const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
-  if (!validTypes.includes(file.type)) {
-    uploadError.value = '请选择有效的图片格式（JPEG、PNG、GIF、WebP）'
-    target.value = ''
-    return
-  }
-  
-  // 检查文件大小（限制为5MB）
-  const maxSize = 5 * 1024 * 1024 // 5MB
-  if (file.size > maxSize) {
-    uploadError.value = '图片大小不能超过5MB'
-    target.value = ''
-    return
-  }
-  
-  imageFile.value = file
-  
-  // 创建预览
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    imagePreview.value = e.target?.result as string
-    form.value.image = imagePreview.value
-  }
-  reader.readAsDataURL(file)
-}
-
-// 移除图片
-const removeImage = () => {
-  imageFile.value = null
-  imagePreview.value = ''
-  form.value.image = ''
-  uploadError.value = ''
-  
-  // 清空文件输入
-  const fileInput = document.getElementById('image-upload') as HTMLInputElement
-  if (fileInput) {
-    fileInput.value = ''
-  }
-}
-
-onMounted(() => {
-  initializeAuth()
-  if (!isLoggedIn.value) {
-    router.push('/login')
-  }
+// 计算属性
+const isFormValid = computed(() => {
+  return form.value.type && 
+         form.value.title.trim() && 
+         form.value.description.trim() && 
+         form.value.site.trim()
 })
 
+const pageTitle = computed(() => {
+  if (isEditMode.value) {
+    return '修改失物招领信息'
+  }
+  return '发布失物招领信息'
+})
+
+const submitButtonText = computed(() => {
+  if (isSubmitting.value) {
+    return isEditMode.value ? '修改中...' : '发布中...'
+  }
+  return isEditMode.value ? '保存修改' : '发布信息'
+})
+
+// 加载物品数据用于编辑
+const loadItemForEdit = async (itemId: number) => {
+  isLoadingItem.value = true
+  try {
+    console.log('加载物品数据用于编辑:', itemId)
+    const result = await getItemById(itemId)
+    
+    if (result.success && result.data) {
+      const item = result.data
+      console.log('获取到的物品数据:', item)
+      
+      // 填充表单数据
+      form.value = {
+        type: item.type as 'found' | 'lost',
+        title: item.title,
+        description: item.description,
+        site: item.site || '',
+        image: item.image || '',
+        imageFile: null, // 编辑时不需要重新上传文件，除非用户选择了新图片
+        location: null, // 暂时不处理精确位置的编辑
+        status: item.status || 'active' // 加载物品状态
+      }
+      
+      // 如果有location数据，直接使用
+      if (item.location && typeof item.location === 'object' && 'lat' in item.location && 'lng' in item.location) {
+        form.value.location = {
+          lat: item.location.lat,
+          lng: item.location.lng
+        }
+        console.log('使用location数据:', form.value.location)
+      }
+      
+      console.log('表单数据已填充:', form.value)
+    } else {
+      alert(`加载物品信息失败：${result.message}`)
+      router.push('/')
+    }
+  } catch (error) {
+    console.error('加载物品数据异常:', error)
+    alert('加载物品信息失败，请稍后重试')
+    router.push('/')
+  } finally {
+    isLoadingItem.value = false
+  }
+}
+
+// 表单验证
+const validateForm = () => {
+  if (!form.value.type) {
+    alert('请选择信息类型')
+    return false
+  }
+  if (!form.value.title.trim()) {
+    alert('请输入物品名称')
+    return false
+  }
+  if (!form.value.description.trim()) {
+    alert('请输入物品描述')
+    return false
+  }
+  if (!form.value.site.trim()) {
+    alert('请输入地点')
+    return false
+  }
+  return true
+}
+
+// 选择信息类型
 const selectType = (type: 'found' | 'lost') => {
   form.value.type = type
 }
 
-const handleSubmit = () => {
-  if (!form.value.type || !form.value.title || !form.value.description || 
-      !form.value.location || !form.value.contact) {
-    alert('请填写完整信息')
+// 选择状态
+const selectStatus = (status: 'active' | 'resolved') => {
+  form.value.status = status
+}
+
+// 处理图片上传 - 与头像上传逻辑一致
+const handleImageUpload = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  
+  if (file) {
+    form.value.imageFile = file
+    
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      form.value.image = e.target?.result as string
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+// 触发文件选择
+const triggerImageUpload = () => {
+  const fileInput = document.getElementById('image-upload') as HTMLInputElement
+  fileInput?.click()
+}
+
+// 提交表单
+const handleSubmit = async () => {
+  if (!validateForm()) {
+    return
+  }
+  
+  if (!isLoggedIn.value) {
+    alert('请先登录')
+    router.push('/login')
     return
   }
 
-  // 如果没有上传图片，使用默认图片
-  const finalImage = form.value.image || 'https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=300&h=200&fit=crop'
-
-  const newItem = {
-    id: Date.now(),
-    title: form.value.title,
-    description: form.value.description,
-    type: form.value.type,
-    location: form.value.location,
-    contact: form.value.contact,
-    date: new Date().toISOString().split('T')[0],
-    image: finalImage,
-    userId: currentUser.value?.id,
-    preciseLocation: preciseLocation.value
+  isSubmitting.value = true
+  
+  try {
+    // 准备API请求数据
+    const itemData: CreateItemRequest = {
+      name: form.value.title,
+      description: form.value.description,
+      eventTime: new Date().toISOString(), // 使用当前时间
+      location: form.value.location ? `${form.value.location.lat.toFixed(6)},${form.value.location.lng.toFixed(6)}` : '', // 精确到6位小数
+      type: form.value.type.toUpperCase() as 'FOUND' | 'LOST',
+      site: form.value.site,
+      image: form.value.imageFile
+    }
+    
+    // 只在编辑模式时添加status参数
+    if (isEditMode.value) {
+      itemData.status = form.value.status === 'resolved' ? 'RESOLVED' : 'ACTIVE'
+    }
+    
+    console.log('准备提交数据:', itemData)
+    
+    let result
+    if (isEditMode.value && editItemId.value) {
+      // 更新模式
+      result = await updateItem(editItemId.value, itemData)
+      console.log('更新结果:', result)
+    } else {
+      // 创建模式
+      result = await createItem(itemData)
+      console.log('创建结果:', result)
+    }
+    
+    if (result.success) {
+      alert(isEditMode.value ? '修改成功！' : '发布成功！')
+      
+      // 重置表单
+      form.value = {
+        type: '',
+        title: '',
+        description: '',
+        site: '',
+        image: '',
+        imageFile: null,
+        location: null,
+        status: 'active'
+      }
+      
+      // 跳转到首页
+      router.push('/')
+    } else {
+      alert(`${isEditMode.value ? '修改' : '发布'}失败: ${result.message}`)
+    }
+  } catch (error) {
+    console.error(`${isEditMode.value ? '修改' : '发布'}异常:`, error)
+    alert(`${isEditMode.value ? '修改' : '发布'}失败，请稍后重试`)
+  } finally {
+    isSubmitting.value = false
   }
+}
 
-  items.value.unshift(newItem)
-  alert('发布成功！')
-  router.push('/')
+// 初始化地图
+const initLocationPicker = async () => {
+  if (!mapContainer.value) return
+  
+  isMapLoading.value = true
+  mapError.value = ''
+  
+  try {
+    await loadTMapAPI()
+    
+    // 初始化地图 - 使用正确的TMap API
+    map = new window.TMap.Map(mapContainer.value, {
+      center: new window.TMap.LatLng(MAP_CONFIG.CENTER.lat, MAP_CONFIG.CENTER.lng),
+      zoom: MAP_CONFIG.DEFAULT_ZOOM
+    })
+    
+    // 添加点击事件
+    map.on('click', (evt: any) => {
+      const latLng = evt.latLng
+      
+      // 更新精确位置
+      form.value.location = {
+        lat: latLng.lat,
+        lng: latLng.lng
+      }
+      
+      // 移除之前的标记
+      if (marker) {
+        marker.setMap(null)
+      }
+      
+      // 添加新标记
+      marker = new window.TMap.MultiMarker({
+        map: map,
+        geometries: [{
+          id: 'selected-location',
+          position: latLng
+        }]
+      })
+      
+      console.log('选择的位置:', form.value.location)
+    })
+    
+  } catch (error) {
+    console.error('地图初始化失败:', error)
+    mapError.value = '地图加载失败，请稍后重试'
+  } finally {
+    isMapLoading.value = false
+  }
+}
+
+// 显示位置选择器
+const showLocationSelector = async () => {
+  showLocationPicker.value = true
+  
+  // 等待DOM更新
+  await new Promise(resolve => setTimeout(resolve, 100))
+  
+  await initLocationPicker()
+}
+
+// 确认位置选择
+const confirmLocation = () => {
+  if (form.value.location) {
+    showLocationPicker.value = false
+    alert('位置选择成功！')
+  } else {
+    alert('请在地图上点击选择位置')
+  }
+}
+
+// 取消位置选择
+const cancelLocationPicker = () => {
+  showLocationPicker.value = false
+  form.value.location = null
+  if (marker) {
+    marker.setMap(null)
+    marker = null
+  }
 }
 
 const goBack = () => {
   router.push('/')
 }
+
+// 初始化
+onMounted(async () => {
+  console.log('Add页面加载，检查用户登录状态')
+  
+  // 初始化认证状态
+  await initializeAuth()
+  
+  // 检查登录状态
+  if (!isLoggedIn.value) {
+    console.log('用户未登录，跳转到登录页')
+    alert('请先登录')
+    router.push('/login')
+    return
+  }
+  
+  // 检查是否为编辑模式
+  const editId = route.query.edit as string
+  if (editId) {
+    const itemId = parseInt(editId)
+    if (!isNaN(itemId)) {
+      console.log('进入编辑模式，物品ID:', itemId)
+      isEditMode.value = true
+      editItemId.value = itemId
+      
+      // 加载物品数据
+      await loadItemForEdit(itemId)
+    } else {
+      console.error('无效的编辑ID:', editId)
+      alert('无效的编辑参数')
+      router.push('/')
+    }
+  } else {
+    console.log('进入新建模式')
+    isEditMode.value = false
+    editItemId.value = null
+  }
+  
+  console.log('用户已登录，页面初始化完成')
+})
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+  <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
     <!-- 导航栏 -->
     <AppNavbar 
-      :page-title="'发布失物招领'"
+      :page-title="pageTitle"
       :current-page="'add'"
       :show-back-button="true"
       :is-scroll-navbar="false"
       :show-navbar="true"
     />
 
+    <!-- 主要内容 -->
     <main class="container mx-auto px-4 py-8">
       <div class="max-w-2xl mx-auto">
-        <div class="text-center mb-8">
-          <h2 class="text-3xl font-bold text-gray-900 mb-4">发布失物招领</h2>
-          <p class="text-gray-600">帮助物品找到它们的主人，让爱心传递下去</p>
-        </div>
-        
-        <div class="bg-white rounded-lg shadow-sm p-8">
-          <form @submit.prevent="handleSubmit" class="space-y-6">
-            <!-- 信息类型选择 -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-4">
-                信息类型 *
-              </label>
-              <div class="grid grid-cols-2 gap-4">
-                <Button 
-                  type="button"
-                  @click="selectType('found')"
-                  :variant="form.type === 'found' ? 'default' : 'outline'" 
-                  class="h-20 flex-col"
-                >
-                  <Search :size="24" class="mb-2" />
-                  <span>拾到物品</span>
-                </Button>
-                <Button 
-                  type="button"
-                  @click="selectType('lost')"
-                  :variant="form.type === 'lost' ? 'default' : 'outline'" 
-                  class="h-20 flex-col"
-                >
-                  <Heart :size="24" class="mb-2" />
-                  <span>寻找物品</span>
-                </Button>
-              </div>
-            </div>
-            
-            <!-- 物品名称 -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                物品名称 *
-              </label>
-              <Input 
-                v-model="form.title"
-                type="text" 
-                placeholder="例如：黑色钱包、iPhone 14..."
-                required
-              />
-            </div>
-            
-            <!-- 详细描述 -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                详细描述 *
-              </label>
-              <textarea 
-                v-model="form.description"
-                rows="4"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="请详细描述物品的特征、颜色、大小等信息..."
-                required
-              ></textarea>
-            </div>
-            
-            <!-- 图片上传 -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                物品图片
-              </label>
-              
-              <!-- 图片预览区域 -->
-              <div v-if="imagePreview" class="mb-4">
-                <div class="relative inline-block">
-                  <img 
-                    :src="imagePreview" 
-                    alt="预览图片" 
-                    class="w-32 h-32 object-cover rounded-lg border-2 border-gray-200"
-                  />
-                  <Button
+        <Card class="shadow-lg border-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm">
+          <CardHeader class="text-center border-b border-gray-200 dark:border-gray-700">
+            <CardTitle class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              {{ isEditMode ? '修改失物招领信息' : '发布失物招领信息' }}
+            </CardTitle>
+            <p class="text-gray-600 dark:text-gray-300 mt-2">
+              {{ isEditMode ? '更新物品信息，帮助更快找到失主' : '帮助物品找到它们的主人，让爱心传递下去' }}
+            </p>
+          </CardHeader>
+          
+          <CardContent class="p-8">
+            <form @submit.prevent="handleSubmit" class="space-y-6">
+              <!-- 信息类型选择 -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
+                  信息类型 *
+                </label>
+                <div class="grid grid-cols-2 gap-4">
+                  <Button 
                     type="button"
-                    @click="removeImage"
-                    variant="destructive"
-                    size="sm"
-                    class="absolute -top-2 -right-2 rounded-full w-6 h-6 p-0"
+                    @click="selectType('found')"
+                    :variant="form.type === 'found' ? 'default' : 'outline'" 
+                    class="h-20 flex-col"
                   >
-                    <X :size="14" />
+                    <Search :size="24" class="mb-2" />
+                    <span>拾到物品</span>
+                  </Button>
+                  <Button 
+                    type="button"
+                    @click="selectType('lost')"
+                    :variant="form.type === 'lost' ? 'default' : 'outline'" 
+                    class="h-20 flex-col"
+                  >
+                    <Heart :size="24" class="mb-2" />
+                    <span>寻找物品</span>
                   </Button>
                 </div>
               </div>
               
-              <!-- 上传按钮 -->
-              <div v-if="!imagePreview" class="relative border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
-                <Upload :size="48" class="mx-auto text-gray-400 mb-4" />
-                <p class="text-sm text-gray-600 mb-4">点击选择图片或拖拽到此处</p>
-                <p class="text-xs text-gray-500 mb-4">支持 JPEG、PNG、GIF、WebP 格式，最大 5MB</p>
-                <Button type="button" variant="outline" size="sm">
-                  <Upload :size="16" class="mr-2" />
-                  选择图片
-                </Button>
-                <input
-                  id="image-upload"
-                  type="file"
-                  accept="image/*"
-                  @change="handleImageUpload"
-                  class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                />
-              </div>
-              
-              <!-- 错误信息 -->
-              <p v-if="uploadError" class="text-red-600 text-sm mt-2">
-                {{ uploadError }}
-              </p>
-              
-              <!-- 重新上传按钮 -->
-              <div v-if="imagePreview" class="mt-4">
-                <Button type="button" variant="outline" size="sm" class="relative overflow-hidden">
-                  <Upload :size="16" class="mr-2" />
-                  重新选择
-                  <input
-                    type="file"
-                    accept="image/*"
-                    @change="handleImageUpload"
-                    class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                  />
-                </Button>
-              </div>
-            </div>
-            
-            <!-- 地点和联系方式 -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  地点 *
+              <!-- 状态选择（仅编辑模式显示） -->
+              <div v-if="isEditMode">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
+                  状态 *
                 </label>
-                <div class="relative">
+                <div class="grid grid-cols-2 gap-4">
+                  <Button 
+                    type="button"
+                    @click="selectStatus('active')"
+                    :variant="form.status === 'active' ? 'default' : 'outline'" 
+                    class="h-16 flex-col"
+                  >
+                    <Search :size="20" class="mb-1" />
+                    <span>进行中</span>
+                  </Button>
+                  <Button 
+                    type="button"
+                    @click="selectStatus('resolved')"
+                    :variant="form.status === 'resolved' ? 'default' : 'outline'" 
+                    class="h-16 flex-col"
+                  >
+                    <Heart :size="20" class="mb-1" />
+                    <span>已找回</span>
+                  </Button>
+                </div>
+              </div>
+              
+              <!-- 物品名称和地点并排 -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- 物品名称 -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    物品名称 *
+                  </label>
                   <Input 
-                    v-model="form.location"
+                    v-model="form.title"
                     type="text" 
-                    placeholder="图书馆、食堂..."
+                    placeholder="例如：黑色钱包、iPhone 14..."
                     required
                   />
-                  <!-- 精确定位按钮 -->
-                  <Button
-                    type="button"
-                    @click="openLocationPicker"
-                    variant="ghost"
-                    size="sm"
-                    class="absolute right-2 top-1/2 transform -translate-y-1/2 p-1"
-                    :class="isLocationSelected ? 'text-blue-600' : 'text-gray-600'"
-                  >
-                    <LocateIcon :size="16" />
-                  </Button>
                 </div>
-                <p v-if="isLocationSelected" class="text-xs text-blue-600 mt-1">
-                   已选择精确位置
-                </p>
+                
+                <!-- 地点信息 -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    地点 *
+                  </label>
+                  <div class="relative">
+                    <Input 
+                      v-model="form.site"
+                      type="text" 
+                      placeholder="例如：图书馆、宿舍区..."
+                      required
+                    />
+                    <Button
+                      type="button"
+                      @click="showLocationSelector"
+                      variant="ghost"
+                      size="sm"
+                      class="absolute right-2 top-1/2 transform -translate-y-1/2 p-1"
+                      :class="form.location ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'"
+                    >
+                      <MapPin :size="16" />
+                    </Button>
+                  </div>
+                  <p v-if="form.location" class="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                    已选择精确位置 ({{ form.location.lat.toFixed(6) }}, {{ form.location.lng.toFixed(6) }})
+                  </p>
+
+                </div>
               </div>
+              
+              <!-- 详细描述 -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  联系方式 *
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  详细描述 *
                 </label>
-                <Input 
-                  v-model="form.contact"
-                  type="tel" 
-                  placeholder="手机号码"
+                <Textarea 
+                  v-model="form.description"
+                  placeholder="请详细描述物品的特征、颜色、大小等信息，这有助于物主识别..."
+                  rows="4"
                   required
                 />
               </div>
-            </div>
-            
-            <!-- 提交按钮 -->
-            <div class="flex gap-4">
-              <Button type="button" @click="goBack" variant="outline" class="flex-1">
-                取消
-              </Button>
-              <Button type="submit" class="flex-1">
-                 发布信息
-              </Button>
-            </div>
-          </form>
-        </div>
+              
+              <!-- 图片上传 -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  图片上传
+                </label>
+                
+                <!-- 图片预览 -->
+                <div v-if="form.image" class="mb-4">
+                  <img 
+                    :src="form.image" 
+                    alt="预览图片" 
+                    class="w-32 h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-600"
+                  />
+                </div>
+                
+                <!-- 上传按钮 -->
+                <div>
+                  <input
+                    type="file"
+                    id="image-upload"
+                    accept="image/*"
+                    @change="handleImageUpload"
+                    class="hidden"
+                  />
+                  <Button
+                    type="button"
+                    @click="triggerImageUpload"
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Upload :size="16" class="mr-1" />
+                    {{ form.image ? '重新选择图片' : '选择图片' }}
+                  </Button>
+                </div>
+              </div>
+              
+              <!-- 提交按钮 -->
+              <div class="flex gap-4 pt-6">
+                <Button type="button" @click="goBack" variant="outline" class="flex-1">
+                  <ArrowLeft :size="16" class="mr-2" />
+                  取消
+                </Button>
+                <Button 
+                  type="submit" 
+                  class="flex-1" 
+                  :disabled="!isFormValid || isSubmitting"
+                >
+                  {{ submitButtonText }}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </main>
 
-    <!-- 地图选点组件 -->
-    <MapPicker
-      v-model:visible="showMapPicker"
-      @select="handleLocationSelect"
-    />
+    <!-- 地图选择器弹窗 -->
+    <div v-if="showLocationPicker" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-2xl h-96 flex flex-col">
+        <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">选择精确位置</h3>
+          <Button @click="cancelLocationPicker" variant="ghost" size="sm">
+            ×
+          </Button>
+        </div>
+        
+        <div class="flex-1 relative">
+          <div v-if="isMapLoading" class="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-700">
+            <div class="text-center">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+              <p class="text-gray-600 dark:text-gray-300">正在加载地图...</p>
+            </div>
+          </div>
+          
+          <div v-if="mapError" class="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-700">
+            <div class="text-center">
+              <p class="text-red-600 dark:text-red-400 mb-2">{{ mapError }}</p>
+              <Button @click="initLocationPicker" variant="outline" size="sm">重试</Button>
+            </div>
+          </div>
+          
+          <div ref="mapContainer" class="w-full h-full"></div>
+        </div>
+        
+        <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-between">
+          <p class="text-sm text-gray-600 dark:text-gray-300 self-center">
+            {{ form.location ? '已选择位置' : '请在地图上点击选择位置' }}
+          </p>
+          <div class="flex gap-2">
+            <Button @click="cancelLocationPicker" variant="outline" size="sm">
+              取消
+            </Button>
+            <Button @click="confirmLocation" :disabled="!form.location" size="sm">
+              确认
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 

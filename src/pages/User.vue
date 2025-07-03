@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { UserX, Mail, Phone, User as UserIcon, Edit, Check, X, Upload, MapPin, Calendar, Save } from 'lucide-vue-next'
-import { isLoggedIn, currentUser, items, initializeAuth, getUserProfile, updateUserProfile, type Item, type User } from '@/stores/user'
-import * as mockData from '@/data/mockData.json'
+import { User as UserIcon, Edit, X, Upload, MapPin, Calendar, Save, Phone, Trash2 } from 'lucide-vue-next'
+import { isLoggedIn, currentUser, initializeAuth, getUserProfile, getPublicUserProfile, updateUserProfile, type User } from '@/stores/user'
+import { items, getUserItems, deleteItem, type Item } from '@/stores/items'
 import UserAvatar from '@/components/UserAvatar.vue'
 import AppNavbar from '@/components/AppNavbar.vue'
 import {
@@ -28,6 +28,7 @@ const isLoading = ref(false)
 const errorMessage = ref('')
 const isEditing = ref(false)
 const isSaving = ref(false)
+const userItemsList = ref<any[]>([]) // 用户发布的物品列表
 
 // 编辑表单数据
 const editForm = ref({
@@ -40,6 +41,11 @@ const editForm = ref({
 
 // 计算属性
 const userItems = computed(() => {
+  // 如果是当前用户，使用API获取的数据
+  if (isCurrentUser.value) {
+    return userItemsList.value
+  }
+  // 如果是其他用户，使用现有逻辑
   if (!targetUser.value) return []
   return items.value.filter(item => item.userId === targetUser.value!.id)
 })
@@ -50,29 +56,57 @@ const pageTitle = computed(() => {
 
 // 获取用户信息
 const getUserInfo = async (userId?: number): Promise<User | null> => {
-  // 如果是当前登录用户，直接返回当前用户信息
-  if (userId && isLoggedIn.value && currentUser.value?.id === userId) {
-    return currentUser.value
-  }
-  
   try {
     isLoading.value = true
     errorMessage.value = ''
     
-    // 调用新的getUserProfile函数（支持可选userId）
-    const result = await getUserProfile(userId)
-    
-    if (result.success && result.data) {
-      // 如果是通过token获取的当前用户信息，更新本地状态
-      if (!userId && isLoggedIn.value) {
-        currentUser.value = result.data
-        localStorage.setItem('user', JSON.stringify(result.data))
+    if (userId) {
+      // 如果指定了userId，判断是否为当前用户
+      if (isLoggedIn.value && currentUser.value?.id === userId) {
+        // 是当前用户，使用getUserProfile获取完整信息
+        // console.log('获取当前用户的完整信息')
+        const result = await getUserProfile()
+        
+        if (result.success && result.data) {
+          // 更新本地状态
+          currentUser.value = result.data
+          localStorage.setItem('user', JSON.stringify(result.data))
+          return result.data
+        } else {
+          errorMessage.value = result.message
+          return null
+        }
+      } else {
+        // 是其他用户，使用getPublicUserProfile获取公开信息
+        // console.log('获取其他用户的公开信息，userId:', userId)
+        const result = await getPublicUserProfile(userId)
+        
+        if (result.success && result.data) {
+          return result.data
+        } else {
+          errorMessage.value = result.message
+          return null
+        }
+      }
+    } else {
+      // 没有指定userId，如果已登录则获取当前用户信息
+      if (!isLoggedIn.value) {
+        errorMessage.value = '请先登录'
+        return null
       }
       
-      return result.data
-    } else {
-      errorMessage.value = result.message
-      return null
+      // console.log('获取当前用户信息（无userId参数）')
+      const result = await getUserProfile()
+      
+      if (result.success && result.data) {
+        // 更新本地状态
+        currentUser.value = result.data
+        localStorage.setItem('user', JSON.stringify(result.data))
+        return result.data
+      } else {
+        errorMessage.value = result.message
+        return null
+      }
     }
   } catch (error) {
     console.error('getUserInfo 异常:', error)
@@ -83,10 +117,51 @@ const getUserInfo = async (userId?: number): Promise<User | null> => {
   }
 }
 
+// 获取用户发布的物品列表
+const loadUserItems = async () => {
+  if (!isCurrentUser.value) return
+  
+  try {
+    // console.log('开始获取用户发布的物品列表...')
+    const result = await getUserItems()
+    
+    if (result.success && result.data) {
+      // 将API数据转换为前端显示格式
+      userItemsList.value = result.data.map((apiItem: any) => ({
+        id: apiItem.id,
+        title: apiItem.name,
+        description: apiItem.description,
+        type: apiItem.type.toLowerCase(),
+        status: apiItem.status.toLowerCase(),
+        location: apiItem.site, // 使用site字段
+        contact: '', // 后端没有返回联系方式
+        date: apiItem.eventTime ? apiItem.eventTime.split('T')[0] : '',
+        image: apiItem.imageUrl ? `/uploads/${apiItem.imageUrl}` : '',
+        userId: apiItem.userId,
+        userName: apiItem.username,
+        userAvatar: targetUser.value?.avatar || '',
+        createdAt: apiItem.createdAt
+      }))
+      
+      // console.log('用户物品列表加载成功:', userItemsList.value)
+    } else {
+      // console.error('获取用户物品列表失败:', result.message)
+      userItemsList.value = []
+    }
+  } catch (error) {
+    console.error('加载用户物品列表异常:', error)
+    userItemsList.value = []
+  }
+}
+
 onMounted(async () => {
   initializeAuth()
   
   const userId = route.query.id ? parseInt(route.query.id as string) : null
+  // console.log('=== User页面初始化 ===')
+  // console.log('URL中的userId:', userId)
+  // console.log('当前登录状态:', isLoggedIn.value)
+  // console.log('当前用户信息:', currentUser.value)
   
   if (userId) {
     // 查看指定用户的信息
@@ -100,13 +175,43 @@ onMounted(async () => {
     
     // 判断是否为当前用户
     isCurrentUser.value = isLoggedIn.value && currentUser.value?.id === userId
+    
+    // console.log('目标用户信息:', targetUser.value)
+    // console.log('是否为当前用户:', isCurrentUser.value)
+    // console.log('判断逻辑:', {
+    //   isLoggedIn: isLoggedIn.value,
+    //   currentUserId: currentUser.value?.id,
+    //   targetUserId: userId,
+    //   result: isLoggedIn.value && currentUser.value?.id === userId
+    // })
+    
+    // 暴露到全局window对象供调试使用
+    ;(window as any).userPageDebug = {
+      isCurrentUser: isCurrentUser.value,
+      targetUser: targetUser.value,
+      currentUser: currentUser.value,
+      isLoggedIn: isLoggedIn.value,
+      userId
+    }
+    
+    // console.log('已将调试信息暴露到 window.userPageDebug')
+    
+    // 如果是当前用户，加载用户发布的物品
+    if (isCurrentUser.value) {
+      // console.log('当前用户，开始加载用户发布的物品')
+      await loadUserItems()
+    } else {
+      // console.log('其他用户，不加载个人物品列表')
+    }
   } else {
     // 没有指定用户ID，如果已登录则跳转到当前用户页面
     if (!isLoggedIn.value) {
+      // console.log('未登录且无用户ID，跳转到登录页')
       router.push('/login')
       return
     }
     
+    // console.log('无用户ID但已登录，重定向到当前用户页面')
     // 重定向到当前用户的页面，使用统一的 /user?id= 格式
     router.push(`/user?id=${currentUser.value?.id}`)
   }
@@ -148,10 +253,10 @@ const saveProfile = async () => {
   
   isSaving.value = true
   try {
-    console.log('准备更新用户资料:', editForm.value)
+    // console.log('准备更新用户资料:', editForm.value)
     
     const updatedUser = await updateUserProfile(editForm.value)
-    console.log('更新用户资料成功:', updatedUser)
+    // console.log('更新用户资料成功:', updatedUser)
     
     // 更新targetUser（界面显示的用户信息）
     targetUser.value = {
@@ -176,7 +281,7 @@ const saveProfile = async () => {
     isEditing.value = false
     alert('保存成功！')
     
-    console.log('界面用户信息已更新:', targetUser.value)
+    // console.log('界面用户信息已更新:', targetUser.value)
     
   } catch (error) {
     console.error('保存失败:', error)
@@ -206,10 +311,42 @@ const triggerFileUpload = () => {
   const fileInput = document.getElementById('avatar-upload') as HTMLInputElement
   fileInput?.click()
 }
+
+// 删除物品
+const handleDeleteItem = async (event: Event, itemId: number, itemTitle: string) => {
+  // 防止事件冒泡
+  event?.stopPropagation()
+  
+  // 确认删除
+  if (!confirm(`确定要删除"${itemTitle}"吗？此操作不可撤销。`)) {
+    return
+  }
+  
+  try {
+    // console.log('开始删除物品:', itemId)
+    const result = await deleteItem(itemId)
+    
+    if (result.success) {
+      // 删除成功，从用户物品列表中移除
+      const index = userItemsList.value.findIndex(item => item.id === itemId)
+      if (index !== -1) {
+        userItemsList.value.splice(index, 1)
+        // console.log('已从用户物品列表中移除:', itemId)
+      }
+      
+      alert('删除成功！')
+    } else {
+      alert(`删除失败：${result.message}`)
+    }
+  } catch (error) {
+    console.error('删除物品异常:', error)
+    alert('删除失败，请稍后重试')
+  }
+}
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+  <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
     <!-- 统一导航栏 -->
     <AppNavbar 
       :page-title="pageTitle"
@@ -223,15 +360,15 @@ const triggerFileUpload = () => {
       <!-- 加载状态 -->
       <div v-if="isLoading" class="max-w-4xl mx-auto text-center py-12">
         <div class="text-gray-400 mb-4 text-4xl">⏳</div>
-        <h3 class="text-lg font-medium text-gray-900 mb-2">正在加载用户信息...</h3>
-        <p class="text-gray-600">请稍候</p>
+        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">正在加载用户信息...</h3>
+        <p class="text-gray-600 dark:text-gray-300">请稍候</p>
       </div>
       
       <!-- 错误状态 -->
       <div v-else-if="errorMessage" class="max-w-4xl mx-auto text-center py-12">
         <div class="text-red-400 mb-4 text-4xl">❌</div>
-        <h3 class="text-lg font-medium text-gray-900 mb-2">获取用户信息失败</h3>
-        <p class="text-gray-600 mb-4">{{ errorMessage }}</p>
+        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">获取用户信息失败</h3>
+        <p class="text-gray-600 dark:text-gray-300 mb-4">{{ errorMessage }}</p>
         <Button @click="router.push('/')" variant="outline">
           返回首页
         </Button>
@@ -299,25 +436,25 @@ const triggerFileUpload = () => {
             <!-- 非编辑模式 - 显示用户信息 -->
             <div v-if="!isEditing" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   邮箱
                 </label>
                 <Input v-model="targetUser.email" readonly  />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   电话号码
                 </label>
                 <Input v-model="targetUser.phoneNumber" readonly  />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   学号
                 </label>
                 <Input v-model="targetUser.studentId" readonly />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   性别
                 </label>
                 <div v-if="!isEditing" >
@@ -331,7 +468,7 @@ const triggerFileUpload = () => {
               <!-- 头像上传 -->
               <div class="text-center">
                 <div class="mb-4">
-                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     头像
                   </label>
                   <div class="flex flex-col items-center gap-3">
@@ -366,7 +503,7 @@ const triggerFileUpload = () => {
               <!-- 基本信息表单 -->
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     邮箱
                   </label>
                   <Input 
@@ -376,7 +513,7 @@ const triggerFileUpload = () => {
                   />
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     电话号码
                   </label>
                   <Input 
@@ -385,7 +522,7 @@ const triggerFileUpload = () => {
                   />
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     学号
                   </label>
                   <Input 
@@ -394,7 +531,7 @@ const triggerFileUpload = () => {
                   />
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     性别
                   </label>
                   <Select v-model="editForm.gender">
@@ -428,10 +565,10 @@ const triggerFileUpload = () => {
               <div class="text-gray-400 mb-4">
                 📝
               </div>
-              <h3 class="text-lg font-medium text-gray-900 mb-2">
+              <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
                 {{ isCurrentUser ? '还没有发布任何信息' : '该用户还没有发布任何信息' }}
               </h3>
-              <p v-if="isCurrentUser" class="text-gray-600 mb-4">快去发布您的第一条失物招领信息吧！</p>
+              <p v-if="isCurrentUser" class="text-gray-600 dark:text-gray-300 mb-4">快去发布您的第一条失物招领信息吧！</p>
               <Button v-if="isCurrentUser" @click="router.push('/add')" size="sm">
                 发布信息
               </Button>
@@ -441,9 +578,20 @@ const triggerFileUpload = () => {
               <Card 
                 v-for="item in userItems" 
                 :key="item.id" 
-                class="border-2 border-dashed border-gray-200 hover:border-blue-300 transition-colors cursor-pointer"
+                class="border-2 border-dashed border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500 transition-colors cursor-pointer relative"
                 @click="handleItemClick(item)"
               >
+                <!-- 删除按钮 - 仅当前用户可见 -->
+                <Button
+                  v-if="isCurrentUser"
+                  @click="handleDeleteItem($event, item.id, item.title)"
+                  variant="destructive"
+                  size="sm"
+                  class="absolute top-2 right-2 z-10 p-1 w-8 h-8"
+                >
+                  <Trash2 :size="14" />
+                </Button>
+                
                 <CardContent class="p-4">
                   <div class="flex items-start gap-3">
                     <img 
@@ -458,8 +606,8 @@ const triggerFileUpload = () => {
                           {{ item.status === 'resolved' ? '已找回' : (item.type === 'found' ? '拾到' : '寻找') }}
                         </Badge>
                       </div>
-                      <p class="text-sm text-gray-600 line-clamp-2 mb-3">{{ item.description }}</p>
-                      <div class="space-y-1 text-xs text-gray-500">
+                      <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-3">{{ item.description }}</p>
+                      <div class="space-y-1 text-xs text-gray-500 dark:text-gray-400">
                         <div class="flex items-center gap-1">
                           <MapPin :size="12" />
                           {{ item.location }}
@@ -468,7 +616,7 @@ const triggerFileUpload = () => {
                           <Calendar :size="12" />
                           {{ item.date }}
                         </div>
-                        <div class="flex items-center gap-1">
+                        <div v-if="item.contact" class="flex items-center gap-1">
                           <Phone :size="12" />
                           {{ item.contact }}
                         </div>

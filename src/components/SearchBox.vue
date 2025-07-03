@@ -66,10 +66,10 @@
       </div>
     </div>
     
-    <!-- 筛选器面板 -->
+    <!-- 筛选器面板 - 紧贴搜索框下方 -->
     <div v-if="shouldShowFilters" :class="[
-      'absolute top-full left-1/2 transform -translate-x-1/2 mt-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-xl border dark:border-gray-700 space-y-4 transition-all duration-300 z-50',
-      size === 'large' ? 'w-full max-w-2xl' : 'w-full max-w-4xl'
+      'mt-2 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700 space-y-4 transition-all duration-300',
+      size === 'large' ? 'max-w-2xl mx-auto' : 'max-w-4xl mx-auto'
     ]">
       <div class="flex flex-wrap items-center gap-4">
         <!-- 分类筛选 -->
@@ -105,47 +105,33 @@
         
         <!-- 时间筛选 -->
         <div class="flex items-center gap-2">
-          <span class="text-sm font-medium">日期:</span>
-          <Popover>
+          <span class="text-sm font-medium"></span>
+          <Popover v-model:open="datePickerOpen">
             <PopoverTrigger as-child>
               <Button
                 variant="outline"
                 size="sm"
                 class="h-8 text-xs justify-start font-normal"
-                :class="!dateRange && 'text-muted-foreground'"
+                :class="dateRange ? 'bg-blue-50' : ''"
               >
                 <CalendarIcon :size="14" class="mr-2" />
-                <template v-if="dateRange?.start">
-                  <template v-if="dateRange.end">
-                    {{ dateRange.start.toString().slice(0,10) }} - {{ dateRange.end.toString().slice(0,10) }}
-                  </template>
-                  <template v-else>
-                    {{ dateRange.start.toString().slice(0,10) }}
-                  </template>
-                </template>
-                <template v-else>
-                  选择日期范围
-                </template>
+                {{ dateRange ? '已选定' : '日期筛选' }}
               </Button>
             </PopoverTrigger>
-            <PopoverContent class="w-auto p-0">
+            <PopoverContent class="w-auto p-0 z-[10000]">
               <RangeCalendar 
                 v-model="dateRange" 
                 initial-focus 
                 :number-of-months="2" 
+                class="w-full"
+                @update:model-value="onDateRangeSelect"
               />
             </PopoverContent>
           </Popover>
-          <Button 
-            v-if="dateRange"
-            @click="clearDateFilter"
-            variant="ghost"
-            size="sm"
-            class="h-8 w-8 p-0"
-          >
-            <X :size="14" />
-          </Button>
         </div>
+        
+        <!-- 位置筛选 -->
+        <SearchLocationPicker v-model="selectedLocation" />
         
         <!-- 清除所有筛选 -->
         <Button 
@@ -160,10 +146,7 @@
         </Button>
       </div>
       
-      <!-- 使用提示 (仅在主页面显示) -->
-      <div v-if="size === 'large'" class="text-xs text-gray-500 mt-3 text-center">
-        💡 设置筛选条件后，在搜索框中输入关键词并按回车键开始搜索
-      </div>
+      
     </div>
     
     <!-- 搜索统计 -->
@@ -192,7 +175,6 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { RangeCalendar } from '@/components/ui/range-calendar'
-import { cn } from '@/lib/utils'
 import { 
   Search, 
   X, 
@@ -201,68 +183,64 @@ import {
   Clock,
   CalendarIcon
 } from 'lucide-vue-next'
+import SearchLocationPicker from '@/components/SearchLocationPicker.vue'
+import { type LocationData } from '@/config/map'
 
 interface Props {
-  // 搜索框尺寸
-  size?: 'normal' | 'large'
-  // 占位符文本
   placeholder?: string
-  // 是否显示筛选功能
-  showFilters?: boolean
-  // 是否显示统计信息
-  showStats?: boolean
-  // 是否自动聚焦
   autoFocus?: boolean
-  // 初始关键词
   initialKeyword?: string
-  // 初始分类
   initialCategory?: 'all' | 'found' | 'lost'
+  initialDate?: string
   // 初始日期范围
   initialDateRange?: any
+  // 初始位置
+  initialLocation?: LocationData | null
   // 搜索结果统计
   stats?: {
     total: number
     found: number
     lost: number
   }
+  showFilters?: boolean
+  showStats?: boolean
+  size?: 'normal' | 'large'
 }
 
 interface Emits {
-  (e: 'search', params: {
-    keyword: string
-    category: 'all' | 'found' | 'lost'
-    dateRange: any
-  }): void
-  (e: 'clear'): void
+  search: [keyword: string, category: string, dateFilter: string | any, location?: { lat: number, lng: number } | null]
+  clear: []
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  size: 'normal',
-  placeholder: '搜索失物招领信息...',
-  showFilters: false,
-  showStats: false,
+  placeholder: '搜索...',
   autoFocus: false,
   initialKeyword: '',
   initialCategory: 'all',
   initialDateRange: undefined,
+  initialLocation: null,
   stats: () => ({ total: 0, found: 0, lost: 0 })
 })
 
-const emit = defineEmits<Emits>()
+const emits = defineEmits<Emits>()
 const router = useRouter()
 
-// 搜索状态
-const searchInput = ref<HTMLInputElement>()
+// 响应式状态
+const searchInput = ref<any>(null)
 const keyword = ref(props.initialKeyword)
-const searching = ref(false)
 const category = ref<'all' | 'found' | 'lost'>(props.initialCategory)
 const dateRange = ref<any>(props.initialDateRange)
+const searching = ref(false)
 const filtersOpen = ref(false)
 const isFocused = ref(false)
+const datePickerOpen = ref(false)
+
+// 位置筛选状态
+const selectedLocation = ref<LocationData | null>(props.initialLocation)
 
 // 计算属性
-const showClear = computed(() => !!keyword.value || category.value !== 'all' || !!dateRange.value)
-const hasActiveFilters = computed(() => category.value !== 'all' || !!dateRange.value)
+const showClear = computed(() => !!keyword.value || category.value !== 'all' || !!dateRange.value || !!selectedLocation.value)
+const hasActiveFilters = computed(() => category.value !== 'all' || !!dateRange.value || !!selectedLocation.value)
 const shouldShowFilters = computed(() => {
   // 显示筛选器面板的条件：
   // 1. 启用了筛选功能
@@ -314,40 +292,28 @@ const handleKeyDown = (e: KeyboardEvent) => {
   if (e.key === 'Enter') {
     handleSearch()
   } else if (e.key === 'Escape') {
-    searchInput.value?.blur()
+    if (searchInput.value?.$el) {
+      searchInput.value.$el.blur()
+    }
     isFocused.value = false
   }
 }
 
 // 执行搜索
 const handleSearch = () => {
-  if (props.size === 'large') {
-    // 大尺寸搜索框跳转到搜索页面，带上筛选条件
-    const urlParams = new URLSearchParams()
-    if (keyword.value.trim()) urlParams.set('q', keyword.value.trim())
-    if (category.value !== 'all') urlParams.set('c', category.value)
-    if (dateRange.value?.start) urlParams.set('startDate', dateRange.value.start.toString())
-    if (dateRange.value?.end) urlParams.set('endDate', dateRange.value.end.toString())
-    
-    const queryString = urlParams.toString()
-    if (queryString) {
-      router.push(`/search?${queryString}`)
-    } else {
-      router.push('/search')
-    }
-  } else {
-    // 普通尺寸发出搜索事件
-    emitSearch()
-  }
+  console.log('执行搜索:', {
+    keyword: keyword.value,
+    category: category.value,
+    dateFilter: dateRange.value,
+    location: selectedLocation.value
+  })
+  
+  emits('search', keyword.value, category.value as 'all' | 'found' | 'lost', dateRange.value, selectedLocation.value)
 }
 
 // 发出搜索事件
 const emitSearch = () => {
-  emit('search', {
-    keyword: keyword.value,
-    category: category.value,
-    dateRange: dateRange.value
-  })
+  emits('search', keyword.value, category.value as 'all' | 'found' | 'lost', dateRange.value, selectedLocation.value)
 }
 
 // 清除搜索
@@ -355,10 +321,14 @@ const clearSearch = () => {
   keyword.value = ''
   category.value = 'all'
   dateRange.value = undefined
+  selectedLocation.value = null
   searching.value = false
   filtersOpen.value = false
-  searchInput.value?.focus()
-  emit('clear')
+  datePickerOpen.value = false
+  if (searchInput.value?.$el) {
+    searchInput.value.$el.focus()
+  }
+  emits('clear')
 }
 
 // 切换筛选器
@@ -368,7 +338,7 @@ const toggleFilters = () => {
   if (!filtersOpen.value) {
     setTimeout(() => {
       const activeElement = document.activeElement
-      if (activeElement !== searchInput.value) {
+      if (activeElement !== searchInput.value?.$el) {
         isFocused.value = false
       }
     }, 100)
@@ -385,20 +355,11 @@ const updateCategory = (newCategory: 'all' | 'found' | 'lost') => {
   }
 }
 
-// 清除日期筛选
-const clearDateFilter = () => {
-  dateRange.value = undefined
-  // 不立即搜索，等用户设置完所有条件后按回车
-  if (props.size === 'normal') {
-    // 只有在搜索页面（normal尺寸）才立即搜索
-    emitSearch()
-  }
-}
-
 // 清除所有筛选
 const clearAllFilters = () => {
   category.value = 'all'
   dateRange.value = undefined
+  selectedLocation.value = null
   // 不立即搜索，等用户设置完所有条件后按回车
   if (props.size === 'normal') {
     // 只有在搜索页面（normal尺寸）才立即搜索
@@ -436,22 +397,55 @@ watch(() => props.initialDateRange, (newDateRange) => {
   }
 }, { immediate: true, deep: true })
 
+// 监听初始位置变化
+watch(() => props.initialLocation, (newLocation) => {
+  if (newLocation !== selectedLocation.value) {
+    selectedLocation.value = newLocation
+  }
+}, { immediate: true, deep: true })
+
 // 自动聚焦
 if (props.autoFocus) {
   nextTick(() => {
-    searchInput.value?.focus()
+    if (searchInput.value?.$el) {
+      searchInput.value.$el.focus()
+    }
   })
 }
 
 // 暴露方法
 defineExpose({
-  focus: () => searchInput.value?.focus(),
+  focus: () => {
+    if (searchInput.value?.$el) {
+      searchInput.value.$el.focus()
+    }
+  },
   clear: clearSearch,
   setKeyword: (value: string) => {
     keyword.value = value
     emitSearch()
   }
 })
+
+// 处理日期范围选择
+const onDateRangeSelect = (value: any) => {
+  // 如果选择了完整的日期范围（start和end都有），则关闭popover
+  if (value && value.start && value.end) {
+    datePickerOpen.value = false
+  }
+  
+  // 不立即搜索，等用户设置完所有条件后按回车
+  if (props.size === 'normal') {
+    // 只有在搜索页面（normal尺寸）才立即搜索
+    emitSearch()
+  }
+}
+</script>
+
+<script lang="ts">
+export default {
+  name: 'SearchBox'
+}
 </script>
 
 <style scoped>

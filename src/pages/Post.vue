@@ -10,7 +10,6 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { 
   MapPin, 
   Calendar, 
-  Phone, 
   User as UserIcon,
   Clock,
   Send,
@@ -18,9 +17,11 @@ import {
   MessageCircle,
   Map,
   X,
-  MessageSquare
+  MessageSquare,
+  Edit
 } from 'lucide-vue-next'
-import { items, isLoggedIn, currentUser, initializeAuth, type Item } from '@/stores/user'
+import { isLoggedIn, currentUser, initializeAuth, getConversations, type ConversationSummary } from '@/stores/user'
+import { items, getItemById, updateItem, type Item } from '@/stores/items'
 import AppNavbar from '@/components/AppNavbar.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import { MAP_CONFIG, loadTMapAPI, type LocationData } from '@/config/map'
@@ -48,42 +49,155 @@ const handleUserClick = () => {
 }
 
 // 格式化时间
-const formatTime = (dateString: string) => {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
+const formatTime = (timeStr: string) => {
+  if (!timeStr) return ''
   
-  const minutes = Math.floor(diff / (1000 * 60))
-  const hours = Math.floor(diff / (1000 * 60 * 60))
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-  
-  if (minutes < 1) return '刚刚'
-  if (minutes < 60) return `${minutes}分钟前`
-  if (hours < 24) return `${hours}小时前`
-  if (days < 7) return `${days}天前`
-  
-  return date.toLocaleDateString('zh-CN')
+  try {
+    const date = new Date(timeStr)
+    if (isNaN(date.getTime())) {
+      return timeStr
+    }
+    
+    return date.toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch (error) {
+    console.error('时间格式化错误:', error)
+    return timeStr
+  }
 }
 
 // 私信发布者
-const sendMessage = () => {
+const sendMessage = async () => {
   if (!post.value || !post.value.userId) return
   
-  router.push(`/message?userId=${post.value.userId}&userName=${post.value.userName}&userAvatar=${encodeURIComponent(post.value.userAvatar || '')}&itemId=${post.value.id}&itemName=${encodeURIComponent(post.value.title)}`)
+  // 检查登录状态
+  if (!isLoggedIn.value) {
+    router.push('/login')
+    return
+  }
+  
+  try {
+    // console.log('Post页面私信处理，检查已有对话...', {
+    //   targetUserId: post.value?.userId,
+    //   postId: post.value?.id,
+    //   currentUserId: currentUser.value?.id
+    // })
+    
+    // 首先获取用户的所有对话列表
+    const conversationsResult = await getConversations()
+    
+    if (conversationsResult.success && conversationsResult.data) {
+      // 查找是否已存在与该用户和物品的对话
+      const existingConversation = conversationsResult.data.find(
+        (conversation: ConversationSummary) => 
+          conversation.otherUserId === post.value?.userId && 
+          conversation.itemId === post.value?.id
+      )
+      
+      if (existingConversation) {
+        // console.log('找到已存在的对话，直接跳转:', existingConversation)
+        
+        // 跳转到已有对话
+        router.push({
+          path: '/message',
+          query: {
+            conversationId: existingConversation.id,
+            userId: existingConversation.otherUserId,
+            userName: existingConversation.otherUsername,
+            itemId: existingConversation.itemId,
+            itemName: existingConversation.itemName
+          }
+        })
+        return
+      } else {
+        // console.log('未找到已存在的对话，创建新对话')
+      }
+    } else {
+      // console.log('获取对话列表失败，继续创建新对话:', conversationsResult.message)
+    }
+  } catch (error) {
+    console.error('检查已有对话时异常:', error)
+  }
+  
+  // 如果没有找到已存在的对话，或者检查失败，则创建新对话
+  // console.log('跳转到新建消息页面')
+  router.push(`/message?userId=${post.value.userId}&userName=${post.value.userName}&itemId=${post.value.id}&itemName=${encodeURIComponent(post.value.title)}`)
 }
 
 // 获取帖子数据
 const getPost = (): Item | null => {
   const postId = parseInt(route.params.id as string)
-  return items.value.find(item => item.id === postId) || null
+  let foundItem = items.value.find(item => item.id === postId) || null
+  
+  // console.log('Post.vue - 获取帖子数据:')
+  // console.log('- 帖子ID:', postId)
+  // console.log('- 找到的帖子:', foundItem)
+  
+  // 如果找到帖子，检查并修复location字段格式
+  if (foundItem) {
+    // console.log('- 帖子location字段:', foundItem.location)
+    // console.log('- 帖子site字段:', foundItem.site)
+    // console.log('- location类型:', typeof foundItem.location)
+    
+    // 如果location是字符串，解析为对象格式
+    if (typeof foundItem.location === 'string') {
+      // console.log('检测到location为字符串格式，尝试解析...')
+      const locationStr = foundItem.location as string
+      const coords = locationStr.split(',')
+      if (coords.length === 2) {
+        const lat = parseFloat(coords[0].trim())
+        const lng = parseFloat(coords[1].trim())
+        if (!isNaN(lat) && !isNaN(lng)) {
+          // 创建一个新的Item对象，避免直接修改原数据
+          foundItem = {
+            ...foundItem,
+            location: { lat, lng }
+          }
+          // console.log('成功解析location:', { lat, lng })
+        } else {
+          console.warn('location坐标解析失败 - 非数字:', coords)
+          foundItem = {
+            ...foundItem,
+            location: undefined
+          }
+        }
+      } else {
+        console.warn('location格式错误 - 不是lat,lng格式:', foundItem.location)
+        foundItem = {
+          ...foundItem,
+          location: undefined
+        }
+      }
+    }
+    
+    if (foundItem.location) {
+      // console.log('- location.lat:', foundItem.location.lat, '类型:', typeof foundItem.location.lat)
+      // console.log('- location.lng:', foundItem.location.lng, '类型:', typeof foundItem.location.lng)
+    }
+  }
+  
+  return foundItem
 }
 
 // 计算属性
 const postExists = computed(() => !!post.value)
 
+// 判断是否为作者
+const isAuthor = computed(() => {
+  return isLoggedIn.value && 
+         currentUser.value && 
+         post.value && 
+         currentUser.value.id === post.value.userId
+})
+
 // 显示地图
 const showLocationMap = async () => {
-  if (!post.value?.preciseLocation) {
+  if (!post.value?.location) {
     mapError.value = '该帖子没有精确位置信息'
     return
   }
@@ -105,7 +219,7 @@ const showLocationMap = async () => {
 
 // 初始化地图
 const initLocationMap = async () => {
-  if (!mapContainer.value || !post.value?.preciseLocation) return
+  if (!mapContainer.value || !post.value?.location) return
   
   isMapLoading.value = true
   mapError.value = ''
@@ -125,7 +239,7 @@ const initLocationMap = async () => {
     // 加载腾讯地图API
     const TMap = await loadTMapAPI()
     
-    const location = post.value.preciseLocation
+    const location = post.value.location
     const center = new TMap.LatLng(location.lat, location.lng)
     
     // 初始化地图
@@ -180,19 +294,27 @@ const closeMap = () => {
   }
 }
 
+// 处理修改按钮点击
+const handleEdit = () => {
+  if (!post.value) return
+  
+  // 跳转到编辑页面，传递物品ID
+  router.push(`/add?edit=${post.value.id}`)
+}
+
 onMounted(() => {
   initializeAuth()
   post.value = getPost()
   
   if (!post.value) {
-    router.push('/404')
+    router.push('/')
     return
   }
 })
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+  <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
     <!-- 导航栏 -->
     <AppNavbar 
       :page-title="'失物详情'"
@@ -205,12 +327,12 @@ onMounted(() => {
     <!-- 主要内容 -->
     <div class="container mx-auto px-4 py-8 max-w-4xl" v-if="postExists">
       <!-- 帖子详情卡片 -->
-      <Card class="mb-8">
+      <Card class="mb-8 dark:bg-gray-800 dark:border-gray-700">
         <!-- 帖子内容 -->
         <CardContent class="pt-6">
           <!-- 标题和物品类型 -->
           <div class="flex items-center justify-between mb-4">
-            <h2 class="text-2xl font-bold text-gray-900 flex-1">{{ post?.title }}</h2>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 flex-1">{{ post?.title }}</h2>
             <Badge :variant="post?.status === 'resolved' ? 'secondary' : (post?.type === 'found' ? 'default' : 'destructive')" class="text-sm ml-4">
               {{ post?.status === 'resolved' ? '已找回' : (post?.type === 'found' ? '拾到物品' : '寻找物品') }}
             </Badge>
@@ -226,7 +348,7 @@ onMounted(() => {
           </div>
           
           <!-- 用户信息和操作按钮 -->
-          <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
+          <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-100 dark:border-gray-700">
             <div class="flex items-center gap-3">
               <UserAvatar 
                 :userId="post?.userId"
@@ -236,8 +358,8 @@ onMounted(() => {
               />
               
               <div class="flex flex-col">
-                <div class="font-semibold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors" @click="handleUserClick()">{{ post?.userName || '匿名用户' }}</div>
-                <div class="flex items-center gap-2 text-sm text-gray-500">
+                <div class="font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors" @click="handleUserClick()">{{ post?.userName || '匿名用户' }}</div>
+                <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                   <Clock :size="14" />
                   <span>{{ formatTime(post?.createdAt || post?.date || '') }}</span>
                 </div>
@@ -245,29 +367,33 @@ onMounted(() => {
             </div>
             <!-- 操作按钮 -->
             <div class="flex gap-3">
-              <Button @click="sendMessage">
+              <Button @click="sendMessage" v-if="!isAuthor">
                 <MessageSquare :size="16" class="mr-2" />
                 私信
+              </Button>
+              <Button @click="handleEdit" v-if="isAuthor" variant="outline" >
+                <Edit :size="16" class="mr-2" />
+                修改
               </Button>
             </div>
           </div>
           
           <!-- 详细描述 -->
           <div class="mb-6">
-            <h3 class="font-semibold text-gray-900 mb-2">详细描述</h3>
-            <p class="text-gray-700 leading-relaxed whitespace-pre-wrap">{{ post?.description }}</p>
+            <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-2">详细描述</h3>
+            <p class="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{{ post?.description }}</p>
           </div>
           
           <!-- 详细信息 -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div class="space-y-3">
-              <div class="flex items-center gap-3 text-gray-600">
-                <MapPin :size="18" class="text-gray-400" />
-                <span class="font-medium">位置:</span>
-                <span>{{ post?.location }}</span>
+              <div class="flex items-center gap-3 text-gray-600 dark:text-gray-300">
+                <MapPin :size="18" class="text-gray-400 dark:text-gray-500" />
+                <span class="font-medium"></span>
+                <span>{{ post?.site }}</span>
                 <!-- 查看精确位置按钮 -->
                 <Button 
-                  v-if="post?.preciseLocation"
+                  v-if="post?.location"
                   @click="showLocationMap"
                   :variant="showMap ? 'default' : 'outline'" 
                   size="sm"
@@ -278,19 +404,12 @@ onMounted(() => {
                 </Button>
               </div>
             </div>
-            <div class="space-y-3">
-              <div class="flex items-center gap-3 text-gray-600">
-                <Phone :size="18" class="text-gray-400" />
-                <span class="font-medium">联系方式:</span>
-                <span>{{ post?.contact }}</span>
-              </div>
-            </div>
           </div>
           
           <!-- 精确位置地图 -->
-          <div v-if="showMap" class="mb-6 border-t pt-6">
+          <div v-if="showMap" class="mb-6 border-t pt-6 dark:border-gray-700">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="font-semibold text-gray-900 flex items-center gap-2">
+              <h3 class="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <Map :size="18" />
                 精确位置
               </h3>
@@ -300,25 +419,25 @@ onMounted(() => {
             </div>
             
             <!-- 位置信息 -->
-            <div v-if="post?.preciseLocation" class="mb-4 text-sm text-gray-600">
-              <p>纬度: {{ post.preciseLocation.lat.toFixed(6) }}, 经度: {{ post.preciseLocation.lng.toFixed(6) }}</p>
+            <div v-if="post?.location?.lat != null && post?.location?.lng != null" class="mb-4 text-sm text-gray-600 dark:text-gray-400">
+              <p>纬度: {{ post.location.lat.toFixed(6) }}, 经度: {{ post.location.lng.toFixed(6) }}</p>
             </div>
             
             <!-- 地图容器 -->
             <div class="relative">
-              <div ref="mapContainer" class="w-full h-80 rounded-lg border border-gray-200"></div>
+              <div ref="mapContainer" class="w-full h-80 rounded-lg border border-gray-200 dark:border-gray-600"></div>
               
               <!-- 加载状态 -->
-              <div v-if="isMapLoading" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg">
+              <div v-if="isMapLoading" class="absolute inset-0 bg-white dark:bg-gray-800 bg-opacity-75 dark:bg-opacity-75 flex items-center justify-center rounded-lg">
                 <div class="text-center">
                   <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                  <p class="text-gray-600">正在加载地图...</p>
+                  <p class="text-gray-600 dark:text-gray-300">正在加载地图...</p>
                 </div>
               </div>
               
               <!-- 错误状态 -->
-              <div v-if="mapError" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg">
-                <div class="text-center text-red-600">
+              <div v-if="mapError" class="absolute inset-0 bg-white dark:bg-gray-800 bg-opacity-75 dark:bg-opacity-75 flex items-center justify-center rounded-lg">
+                <div class="text-center text-red-600 dark:text-red-400">
                   <p class="mb-2">地图加载失败</p>
                   <p class="text-sm">{{ mapError }}</p>
                   <Button 
@@ -340,8 +459,8 @@ onMounted(() => {
     <!-- 404状态 -->
     <div v-else class="container mx-auto px-4 py-16 text-center">
       <div class="max-w-md mx-auto">
-        <h2 class="text-2xl font-bold text-gray-900 mb-4">帖子不存在</h2>
-        <p class="text-gray-600 mb-6">抱歉，您访问的帖子可能已被删除或不存在。</p>
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">帖子不存在</h2>
+        <p class="text-gray-600 dark:text-gray-300 mb-6">抱歉，您访问的帖子可能已被删除或不存在。</p>
         <Button @click="router.push('/')" variant="outline">
           返回首页
         </Button>

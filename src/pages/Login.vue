@@ -121,7 +121,7 @@ const goBack = () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+  <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
     <Card class="w-full max-w-md">
       <CardHeader class="text-center space-y-4">
         <div class="flex items-center justify-center">
@@ -131,7 +131,7 @@ const goBack = () => {
         </div>
         <div>
           <CardTitle class="text-2xl font-bold">登录BUPTFound</CardTitle>
-          <CardDescription class="text-gray-600 mt-2">
+          <CardDescription class="text-gray-600 dark:text-gray-300 mt-2">
             登录或注册账户来发布和管理您的招领信息
           </CardDescription>
         </div>
@@ -139,10 +139,10 @@ const goBack = () => {
       
       <CardContent class="space-y-6">
         <!-- 错误和成功消息 -->
-        <div v-if="errorMessage" class="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+        <div v-if="errorMessage" class="p-3 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
           {{ errorMessage }}
         </div>
-        <div v-if="successMessage" class="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
+        <div v-if="successMessage" class="p-3 text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
           {{ successMessage }}
         </div>
 
@@ -155,7 +155,7 @@ const goBack = () => {
           <TabsContent value="login">
             <form @submit.prevent="handleLogin" class="space-y-4">
               <div class="space-y-2">
-                <label class="text-sm font-medium">用户名</label>
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">用户名</label>
                 <Input 
                   v-model="loginForm.username" 
                   type="text" 
@@ -165,7 +165,7 @@ const goBack = () => {
                 />
               </div>
               <div class="space-y-2">
-                <label class="text-sm font-medium">密码</label>
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">密码</label>
                 <Input 
                   v-model="loginForm.password" 
                   type="password" 
@@ -187,7 +187,7 @@ const goBack = () => {
           <TabsContent value="register" class="space-y-4">
             <form @submit.prevent="handleRegister" class="space-y-4">
               <div class="space-y-2">
-                <label class="text-sm font-medium">用户名</label>
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">用户名</label>
                 <Input 
                   v-model="registerForm.username" 
                   type="text" 
@@ -197,7 +197,7 @@ const goBack = () => {
                 />
               </div>
               <div class="space-y-2">
-                <label class="text-sm font-medium">密码</label>
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">密码</label>
                 <Input 
                   v-model="registerForm.password" 
                   type="password" 
@@ -207,7 +207,7 @@ const goBack = () => {
                 />
               </div>
               <div class="space-y-2">
-                <label class="text-sm font-medium">确认密码</label>
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">确认密码</label>
                 <Input 
                   v-model="registerForm.confirmPassword" 
                   type="password" 

@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue'
-import * as mockData from '@/data/mockData.json'
+// import * as mockData from '@/data/mockData.json'
 
 // 后端API配置
 const API_BASE_URL = ''
@@ -31,27 +31,6 @@ export interface User {
   avatarUrl?: string
 }
 
-// 物品类型接口
-export interface Item {
-  id: number
-  title: string
-  description: string
-  type: 'found' | 'lost'
-  status?: 'active' | 'resolved'
-  location: string
-  contact: string
-  date: string
-  image: string
-  userId?: number
-  userName?: string
-  userAvatar?: string
-  createdAt?: string
-  preciseLocation?: {
-    lat: number
-    lng: number
-  }
-}
-
 // API响应接口
 interface ApiResponse {
   success: boolean
@@ -63,25 +42,22 @@ interface ApiResponse {
 export const isLoggedIn = ref(false)
 export const currentUser = ref<User | null>(null)
 
-// 从JSON文件加载模拟数据
-export const items = ref<Item[]>((mockData as any).items || [])
-
-// 计算属性
-export const userItems = computed(() => {
-  if (!currentUser.value) return []
-  return items.value.filter(item => item.userId === currentUser.value?.id)
+// 计算属性 - 获取用户发布的物品数量
+export const userItemsCount = computed(() => {
+  // 这里可以根据需要从items store中获取用户物品数量
+  return 0
 })
 
 // API调用函数
 const apiCall = async (endpoint: string, method: string, data?: any): Promise<ApiResponse> => {
   try {
-    console.log('API 请求开始:', {
-      endpoint,
-      method,
-      data,
-      baseUrl: API_BASE_URL,
-      fullUrl: `${API_BASE_URL}${endpoint}`
-    })
+    // console.log('API 请求开始:', {
+    //   endpoint,
+    //   method,
+    //   data,
+    //   baseUrl: API_BASE_URL,
+    //   fullUrl: `${API_BASE_URL}${endpoint}`
+    // })
     
     // 准备请求头
     const headers: Record<string, string> = {
@@ -92,7 +68,7 @@ const apiCall = async (endpoint: string, method: string, data?: any): Promise<Ap
     const token = localStorage.getItem('token')
     if (token) {
       headers['Authorization'] = `Bearer ${token}`
-      console.log('添加 Authorization 头:', `Bearer ${token}`)
+      // console.log('添加 Authorization 头:', `Bearer ${token}`)
     }
     
     console.log('请求头:', headers)
@@ -119,7 +95,7 @@ const apiCall = async (endpoint: string, method: string, data?: any): Promise<Ap
     if (isJson) {
       try {
         result = await response.json()
-        console.log('解析的 JSON 响应:', result)
+        // console.log('解析的 JSON 响应:', result)
       } catch (jsonError) {
         console.error('JSON解析失败:', jsonError)
         result = { message: '服务器响应格式错误' }
@@ -138,7 +114,7 @@ const apiCall = async (endpoint: string, method: string, data?: any): Promise<Ap
         message: result.message || '操作成功',
         data: result.data || result
       }
-      console.log('API 调用成功:', successResult)
+      // console.log('API 调用成功:', successResult)
       return successResult
     } else {
       // 处理不同的错误状态码
@@ -185,6 +161,8 @@ const apiCall = async (endpoint: string, method: string, data?: any): Promise<Ap
 // 登录函数
 export const login = async (username: string, password: string): Promise<{ success: boolean; message: string }> => {
   try {
+    console.log('登录开始:', { username })
+    
     if (isTestAccount(username, password)) {
       // 测试账户登录
       currentUser.value = {
@@ -196,25 +174,57 @@ export const login = async (username: string, password: string): Promise<{ succe
       isLoggedIn.value = true
       localStorage.setItem('token', 'test-token')
       localStorage.setItem('user', JSON.stringify(currentUser.value))
+      console.log('测试账户登录成功:', currentUser.value)
       return { success: true, message: '登录成功' }
     }
 
     // 使用后端API登录
     const result = await apiCall('/auth/login', 'POST', { username, password })
+    console.log('登录 API 调用结果:', result)
     
     if (result.success) {
       const data = result.data
-      currentUser.value = {
+      console.log('登录响应数据:', data)
+      
+      // 先设置基本用户信息和token
+      const basicUser = {
         id: parseInt(data.id || data.userId) || 0,
-        name: data.name || data.username,
-        username: data.username,
+        name: data.name || data.username || username,
+        username: data.username || username,
         avatar: data.avatar || ''
       }
+      
+      currentUser.value = basicUser
       isLoggedIn.value = true
-      localStorage.setItem('token', data.token || 'api-token')
-      localStorage.setItem('user', JSON.stringify(currentUser.value))
+      const token = data.token || 'api-token'
+      localStorage.setItem('token', token)
+      localStorage.setItem('user', JSON.stringify(basicUser))
+      
+      console.log('基本用户信息设置完成:', basicUser)
+      console.log('Token 已保存:', token)
+      
+      // 登录成功后，调用 getUserProfile 获取完整的用户信息
+      try {
+        console.log('开始获取完整用户信息...')
+        const profileResult = await getUserProfile()
+        console.log('获取用户 profile 结果:', profileResult)
+        
+        if (profileResult.success && profileResult.data) {
+          console.log('更新用户信息为完整信息:', profileResult.data)
+          currentUser.value = profileResult.data
+          localStorage.setItem('user', JSON.stringify(profileResult.data))
+        } else {
+          console.log('获取完整用户信息失败，使用基本信息')
+        }
+      } catch (profileError) {
+        console.error('获取用户profile异常:', profileError)
+        // 即使获取profile失败，也不影响登录状态
+      }
+      
+      console.log('最终用户信息:', currentUser.value)
       return { success: true, message: result.message || '登录成功' }
     } else {
+      console.log('登录失败:', result.message)
       return { success: false, message: result.message || '用户名或密码错误' }
     }
   } catch (error) {
@@ -300,49 +310,28 @@ export const getTestAccountInfo = () => {
   }
 }
 
-// 测试API连接的函数
-// export const testApiConnection = async (): Promise<{ success: boolean; message: string }> => {
-//   try {
-//     const response = await fetch(`/health`, {
-//       method: 'GET',
-//       headers: {
-//         'Content-Type': 'application/json',
-//       }
-//     })
-    
-//     if (response.ok) {
-//       return { success: true, message: '后端API连接正常' }
-//     } else {
-//       return { success: false, message: `API响应错误: ${response.status}` }
-//     }
-//   } catch (error) {
-//     console.error('API连接测试失败:', error)
-//     return { success: false, message: `无法连接到后端服务 (${API_BASE_URL})` }
-//   }
-// }
-
 // 获取用户profile信息的API调用
 export const getUserProfile = async (userId?: number): Promise<{ success: boolean; data?: User; message: string }> => {
+  console.log('开始获取用户资料，传入的 userId:', userId)
+  
   try {
-    console.log('getUserProfile 调用开始:', { userId })
-    
     // 如果传入了userId，先检查mockData中是否有该用户
-    if (userId) {
-      const users = mockData.users as User[]
-      const mockUser = users.find(user => user.id === userId)
-      
-      if (mockUser) {
-        console.log('从 mockData 找到用户:', mockUser)
-        return {
-          success: true,
-          data: mockUser,
-          message: '获取用户信息成功'
-        }
-      } else {
-        console.log('mockData 中未找到 userId:', userId)
-      }
-    }
-    
+    // if (userId) {
+    //   const users = mockData.users as User[]
+    //   const mockUser = users.find(user => user.id === userId)
+    //   
+    //   if (mockUser) {
+    //     console.log('从 mockData 找到用户:', mockUser)
+    //     return {
+    //       success: true,
+    //       data: mockUser,
+    //       message: '获取用户资料成功'
+    //     }
+    //   } else {
+    //     console.log('mockData 中未找到 userId:', userId)
+    //   }
+    // }
+
     // 构建API请求
     const endpoint = userId ? `/profile?id=${userId}` : '/profile'
     console.log('调用后端 API:', endpoint)
@@ -488,22 +477,21 @@ export const updateUserProfile = async (profileData: Partial<User>): Promise<Use
   }
 }
 
-// 消息API接口定义
+// 更新消息响应接口
 export interface MessageResponse {
-  anonymous: boolean
-  content: string
-  conversationId: number
   id: number
-  itemId: number
-  itemName: string
-  outgoing: boolean
-  read: boolean
-  receiverId: number
-  receiverName: string
   senderId: number
   senderName: string
+  receiverId: number
+  receiverName: string
+  itemId: number
+  itemName: string
+  conversationId: number
+  content: string
   sentTime: string
-  [property: string]: any
+  read: boolean
+  anonymous: boolean
+  outgoing: boolean
 }
 
 // 发送消息的API调用
@@ -615,6 +603,108 @@ export const getConversations = async (): Promise<{ success: boolean; data?: Con
       success: false,
       data: [],
       message: '网络连接失败，请检查后端服务是否启动'
+    }
+  }
+}
+
+// 获取特定对话的所有消息
+export const getConversationMessages = async (conversationId: number): Promise<{ success: boolean; data?: MessageResponse[]; message: string }> => {
+  try {
+    console.log('获取对话消息:', conversationId)
+    
+    const response = await apiCall(`/messages/conversations/${conversationId}`, 'GET')
+    
+    if (response.success && response.data) {
+      console.log('对话消息获取成功:', response.data)
+      return {
+        success: true,
+        data: response.data as MessageResponse[],
+        message: '获取成功'
+      }
+    } else {
+      console.error('获取对话消息失败:', response.message)
+      return {
+        success: false,
+        message: response.message || '获取对话消息失败'
+      }
+    }
+  } catch (error) {
+    console.error('获取对话消息异常:', error)
+    return {
+      success: false,
+      message: '网络错误，请稍后重试'
+    }
+  }
+}
+
+// 获取其他用户公开信息的API调用
+export const getPublicUserProfile = async (userId: number): Promise<{ success: boolean; data?: User; message: string }> => {
+  console.log('开始获取用户公开信息，userId:', userId)
+  
+  try {
+    const result = await apiCall(`/profile/user/${userId}`, 'GET')
+    console.log('获取用户公开信息 API 调用结果:', result)
+    
+    if (result.success && result.data) {
+      const apiData = result.data
+      console.log('API 返回的公开用户数据:', apiData)
+      
+      // 将API返回的数据转换为标准User格式
+      const user: User = {
+        id: parseInt(apiData.userId || apiData.id) || userId,
+        name: apiData.username || `用户${apiData.userId || apiData.id || userId}`,
+        username: apiData.username || `user${apiData.userId || apiData.id || userId}`,
+        avatar: apiData.avatarUrl ? `/uploads/${apiData.avatarUrl}` : '',
+        // 保留API的额外字段
+        userId: apiData.userId,
+        gender: apiData.gender,
+        avatarUrl: apiData.avatarUrl
+      }
+      
+      console.log('转换后的公开用户数据:', user)
+      
+      return {
+        success: true,
+        data: user,
+        message: '获取用户公开信息成功'
+      }
+    } else {
+      console.log('API 调用失败或无数据:', result)
+      return {
+        success: false,
+        message: result.message || '获取用户公开信息失败'
+      }
+    }
+  } catch (error) {
+    console.error('获取用户公开信息异常:', error)
+    
+    return {
+      success: false,
+      message: '网络连接失败，请检查后端服务是否启动'
+    }
+  }
+}
+
+// 获取未读消息数量的API调用
+export const getUnreadMessageCount = async (): Promise<{ success: boolean; data?: { count: number }; message: string }> => {
+  // console.log('开始获取未读消息数量...')
+  
+  const result = await apiCall('/messages/unread-count', 'GET')
+  // console.log('获取未读消息数量 API 调用结果:', result)
+  
+  if (result.success && result.data) {
+    const count = typeof result.data === 'number' ? result.data : result.data.count || 0
+    
+    return {
+      success: true,
+      data: { count },
+      message: '获取未读消息数量成功'
+    }
+  } else {
+    return {
+      success: false,
+      data: { count: 0 },
+      message: result.message || '获取未读消息数量失败'
     }
   }
 } 

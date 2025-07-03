@@ -20,7 +20,7 @@ export default defineConfig({
         changeOrigin: true,
         secure: false
       },
-      '/upload': {
+      '/uploads': {
         target: API_BASE_URL,
         changeOrigin: true,
         secure: false
@@ -36,6 +36,31 @@ export default defineConfig({
         secure: false
       },
       '/uploads': {
+        target: API_BASE_URL,
+        changeOrigin: true,
+        secure: false
+      },
+      '/messages': {
+        target: API_BASE_URL,
+        changeOrigin: true,
+        secure: false
+      },
+      '/messages/conversation': {
+        target: API_BASE_URL,
+        changeOrigin: true,
+        secure: false 
+      },
+      '/messages/conversations': {
+        target: API_BASE_URL,
+        changeOrigin: true,
+        secure: false
+      },
+      '/messages/conversation/': {
+        target: API_BASE_URL,
+        changeOrigin: true,
+        secure: false
+      },
+      '/items': {
         target: API_BASE_URL,
         changeOrigin: true,
         secure: false
