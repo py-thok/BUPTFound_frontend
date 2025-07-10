@@ -1,5 +1,26 @@
-# Vue 3 + Vite
+# 大型程序设计 小学期 BUPTfound
 
-This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+上周搓的 忘了
+vue+ts
 
-Learn more about IDE Support for Vue in the [Vue Docs Scaling up Guide](https://vuejs.org/guide/scaling-up/tooling.html#ide-support).
+搭建（需要后端）
+
+```
+pnpm install
+pnpm run dev
+```
+
+![image-20250710154811952](README/image-20250710154811952.png)
+![image-20250710154759543](README/image-20250710154759543.png)
+
+![image-20250710154821527](README/image-20250710154821527.png)
+
+![image-20250710154829052](README/image-20250710154829052.png)
+
+![image-20250710154906442](README/image-20250710154906442.png)
+
+![image-20250710154925071](README/image-20250710154925071.png)
+
+![image-20250710154931728](README/image-20250710154931728.png)
+
+![image-20250710154940631](README/image-20250710154940631.png)

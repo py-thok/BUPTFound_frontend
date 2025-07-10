@@ -399,7 +399,7 @@ onMounted(async () => {
                     :variant="form.type === 'found' ? 'default' : 'outline'" 
                     class="h-20 flex-col"
                   >
-                    <Search :size="24" class="mb-2" />
+                    <Search :size="24" class="mb-2 icon-bg-fill" />
                     <span>拾到物品</span>
                   </Button>
                   <Button 
@@ -408,7 +408,7 @@ onMounted(async () => {
                     :variant="form.type === 'lost' ? 'default' : 'outline'" 
                     class="h-20 flex-col"
                   >
-                    <Heart :size="24" class="mb-2" />
+                    <Heart :size="24" class="mb-2 icon-bg-fill" />
                     <span>寻找物品</span>
                   </Button>
                 </div>
@@ -426,7 +426,7 @@ onMounted(async () => {
                     :variant="form.status === 'active' ? 'default' : 'outline'" 
                     class="h-16 flex-col"
                   >
-                    <Search :size="20" class="mb-1" />
+                    <Search :size="20" class="mb-1 icon-bg-fill" />
                     <span>进行中</span>
                   </Button>
                   <Button 
@@ -435,7 +435,7 @@ onMounted(async () => {
                     :variant="form.status === 'resolved' ? 'default' : 'outline'" 
                     class="h-16 flex-col"
                   >
-                    <Heart :size="20" class="mb-1" />
+                    <Heart :size="20" class="mb-1 icon-bg-fill" />
                     <span>已找回</span>
                   </Button>
                 </div>
@@ -476,7 +476,7 @@ onMounted(async () => {
                       class="absolute right-2 top-1/2 transform -translate-y-1/2 p-1"
                       :class="form.location ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'"
                     >
-                      <MapPin :size="16" />
+                      <MapPin :size="16" class="mr-2 icon-bg-fill" />
                     </Button>
                   </div>
                   <p v-if="form.location" class="text-xs text-blue-600 dark:text-blue-400 mt-1">
@@ -529,7 +529,7 @@ onMounted(async () => {
                     variant="outline"
                     size="sm"
                   >
-                    <Upload :size="16" class="mr-1" />
+                    <Upload :size="20" class="mr-2 icon-bg-fill" />
                     {{ form.image ? '重新选择图片' : '选择图片' }}
                   </Button>
                 </div>
@@ -538,7 +538,7 @@ onMounted(async () => {
               <!-- 提交按钮 -->
               <div class="flex gap-4 pt-6">
                 <Button type="button" @click="goBack" variant="outline" class="flex-1">
-                  <ArrowLeft :size="16" class="mr-2" />
+                  <ArrowLeft :size="24" class="mr-2 icon-bg-fill" />
                   取消
                 </Button>
                 <Button 
@@ -618,5 +618,10 @@ onMounted(async () => {
 .relative {
   position: relative;
   overflow: hidden;
+}
+
+/* Lucide图标填充色与父容器背景一致的样式 */
+.icon-bg-fill {
+  fill: var(--bg-color, currentColor);
 }
 </style>

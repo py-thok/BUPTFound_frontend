@@ -18,7 +18,7 @@
             size="sm" 
             class="p-0"
           >
-            <ArrowLeft :size="24" />
+            <ArrowLeft :size="24" class="icon-bg-fill" />
           </Button>
           
           <!-- 标题 -->
@@ -34,7 +34,7 @@
         <div class="flex-1 max-w-md mx-8" v-if="showSearch && isLoggedIn">
           <div class="relative">
             <div class="absolute left-3 top-1/2 transform -translate-y-1/2">
-              <Search :size="16" class="text-gray-400" />
+              <Search :size="16" class="text-gray-400 icon-bg-fill" />
             </div>
             <Input
               v-model="searchQuery"
@@ -56,7 +56,7 @@
               size="sm"
               :class="currentPage === 'home' ? 'cursor-default' : ''"
             >
-              <List :size="18" class="mr-1" />
+              <List :size="18" class="mr-1 icon-bg-fill" />
               物品列表
             </Button>
             
@@ -66,11 +66,11 @@
               variant="outline"
               size="sm"
             >
-              <Sun v-if="isDarkMode" :size="18" class="mr-1" />
-              <Moon v-else :size="18" class="mr-1" />
+              <Sun v-if="isDark" :size="18" class="mr-1 icon-bg-fill" />
+              <Moon v-else :size="18" class="mr-1 icon-bg-fill" />
             </Button>
             <Button @click="handleUserAction" variant="outline" size="sm">
-              <User :size="16" class="mr-1" />
+              <User :size="16" class="mr-1 icon-bg-fill" />
               {{ userStatusText }}
             </Button>
           </div>
@@ -84,7 +84,7 @@
               size="sm"
               :class="currentPage === 'home' ? 'cursor-default' : ''"
             >
-              <List :size="18" class="mr-1" />
+              <List :size="18" class="mr-1 icon-bg-fill" />
               物品列表
             </Button>
             
@@ -92,12 +92,12 @@
             <div class="relative">
               <Button
                 @click="handleMessages"
-                :variant="currentPage === 'messages' ? 'default' : 'outline'"
+                :variant="currentPage === 'mymessages' ? 'default' : 'outline'"
                 size="sm"
-                :disabled="currentPage === 'messages'"
-                :class="currentPage === 'messages' ? 'cursor-default' : ''"
+                :disabled="currentPage === 'mymessages'"
+                :class="currentPage === 'mymessages' ? 'cursor-default' : ''"
               >
-                <MessageCircle :size="18" class="mr-1" />
+                <MessageCircle :size="18" class="mr-1 icon-bg-fill" />
                 消息列表
               </Button>
               <!-- 未读消息小红点 -->
@@ -118,7 +118,7 @@
               :disabled="currentPage === 'add'"
               :class="currentPage === 'add' ? 'cursor-default' : ''"
             >
-              <Plus :size="18" class="mr-1" />
+              <Plus :size="18" class="mr-1 icon-bg-fill" />
               发布信息
             </Button>
             
@@ -128,8 +128,8 @@
               variant="outline"
               size="sm"
             >
-              <Sun v-if="isDarkMode" :size="18" class="mr-1" />
-              <Moon v-else :size="18" class="mr-1" />
+              <Sun v-if="isDark" :size="18" class="mr-1 icon-bg-fill" />
+              <Moon v-else :size="18" class="mr-1 icon-bg-fill" />
             </Button>
             
             <!-- 用户头像 -->
@@ -145,7 +145,7 @@
             
             <!-- 退出按钮 -->
             <Button @click="handleLogout" variant="outline" size="sm">
-              <LogOut :size="16" class="mr-1" />
+              <LogOut :size="16" class="mr-1 icon-bg-fill" />
               退出
             </Button>
           </div>
@@ -166,6 +166,7 @@ import { Search, ArrowLeft, Sun, Moon, LogOut, User, List, MessageCircle, Plus }
 import { useToast } from '@/components/ui/toast/use-toast'
 import { isLoggedIn, currentUser, logout, getUnreadMessageCount } from '@/stores/user'
 import UserAvatar from '@/components/UserAvatar.vue'
+import { useTheme } from '@/composables/useTheme'
 
 export default defineComponent({
   name: 'AppNavbar',
@@ -216,8 +217,8 @@ export default defineComponent({
   setup(props) {
     const router = useRouter()
     const { toast } = useToast()
+    const { isDark, toggleTheme } = useTheme()
     const searchQuery = ref('')
-    const isDarkMode = ref(false)
     const unreadCount = ref(0) // 未读消息数量
     const previousUnreadCount = ref(-1) // 上次的未读数量，用于检测变化，初始化为-1
     const lastToastTime = ref(0) // 上次显示Toast的时间戳，避免重复显示
@@ -346,11 +347,6 @@ export default defineComponent({
       router.push('/')
     }
 
-    const toggleTheme = () => {
-      isDarkMode.value = !isDarkMode.value
-      document.documentElement.classList.toggle('dark', isDarkMode.value)
-    }
-
     const handleUserClick = async () => {
       console.log('=== handleUserClick 被调用 ===')
       console.log('当前登录状态:', isLoggedIn.value)
@@ -403,7 +399,7 @@ export default defineComponent({
     }
 
     const handleMessages = () => {
-      router.push('/messages')
+      router.push('/mymessages')
     }
 
     const goToHome = () => {
@@ -439,7 +435,7 @@ export default defineComponent({
 
     return {
       searchQuery,
-      isDarkMode,
+      isDark,
       searchPlaceholder,
       userStatusText,
       unreadCount,
@@ -463,5 +459,10 @@ export default defineComponent({
 /* 确保Badge在相对定位的容器中正确显示 */
 .relative {
   position: relative;
+}
+
+/* Lucide图标填充色与父容器背景一致的样式 */
+.icon-bg-fill {
+  fill: var(--bg-color, currentColor);
 }
 </style> 

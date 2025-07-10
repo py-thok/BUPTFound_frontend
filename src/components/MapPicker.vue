@@ -8,7 +8,7 @@
           @click="close"
           class="text-gray-400 hover:text-gray-600 transition-colors"
         >
-          <X :size="24" />
+          <X :size="24" class="icon-bg-fill" />
         </button>
       </div>
       

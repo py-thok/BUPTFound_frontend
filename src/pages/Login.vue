@@ -126,7 +126,7 @@ const goBack = () => {
       <CardHeader class="text-center space-y-4">
         <div class="flex items-center justify-center">
           <Button @click="goBack" variant="ghost" size="sm" class="absolute left-4 top-4">
-            <ArrowLeft :size="48" />
+            <ArrowLeft :size="24" class="icon-bg-fill" />
           </Button>
         </div>
         <div>
@@ -175,7 +175,7 @@ const goBack = () => {
                 />
               </div>
               <Button type="submit" class="w-full" :disabled="isLoading">
-                <Loader2 v-if="isLoading" class="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 v-if="isLoading" :size="16" class="animate-spin mr-2 icon-bg-fill" />
                 {{ isLoading ? '登录中...' : '立即登录' }}
               </Button>
               <div class="text-center">
@@ -217,7 +217,7 @@ const goBack = () => {
                 />
               </div>
               <Button type="submit" class="w-full" :disabled="isLoading">
-                <Loader2 v-if="isLoading" class="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 v-if="isLoading" :size="16" class="animate-spin mr-2 icon-bg-fill" />
                 {{ isLoading ? '注册中...' : '立即注册' }}
               </Button>
               <div class="text-center">
@@ -228,4 +228,9 @@ const goBack = () => {
       </CardContent>
     </Card>
   </div>
-</template> 
+</template>
+
+/* Lucide图标填充色与父容器背景一致的样式 */
+.icon-bg-fill {
+  fill: var(--bg-color, currentColor);
+} 

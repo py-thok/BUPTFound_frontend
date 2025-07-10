@@ -388,7 +388,7 @@ onUnmounted(() => {
               :disabled="isLoading"
               class="p-2"
             >
-              <RefreshCw :class="{ 'animate-spin': isLoading }" class="h-4 w-4" />
+              <RefreshCw :class="{ 'animate-spin': isLoading }" class="h-4 w-4 icon-bg-fill" />
             </Button>
           </div>
           
@@ -410,12 +410,12 @@ onUnmounted(() => {
                 v-else
                 class="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center"
               >
-                <Package :size="24" class="text-gray-400" />
+                <Package :size="24" class="text-gray-400 icon-bg-fill" />
               </div>
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 mb-1">
-                <Package :size="16" class="text-blue-600" />
+                <Package :size="14" class="text-blue-600 dark:text-blue-400 icon-bg-fill" />
                 <h4 class="font-medium text-gray-900 dark:text-gray-100 truncate">{{ relatedItem.title }}</h4>
                 <Badge :variant="relatedItem.status === 'resolved' ? 'secondary' : (relatedItem.type === 'found' ? 'default' : 'destructive')" class="text-xs">
                   {{ relatedItem.status === 'resolved' ? '已找回' : (relatedItem.type === 'found' ? '拾到' : '寻找') }}
@@ -427,7 +427,7 @@ onUnmounted(() => {
           
           <!-- 没有物品信息时的提示 -->
           <div v-else-if="itemName" class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-            <Package :size="24" class="text-gray-400 dark:text-gray-500" />
+            <Package :size="24" class="text-gray-400 dark:text-gray-500 icon-bg-fill" />
             <div>
               <h4 class="font-medium text-gray-900 dark:text-gray-100">{{ itemName }}</h4>
               <p class="text-sm text-gray-500 dark:text-gray-400">关于此物品的对话</p>
@@ -452,7 +452,7 @@ onUnmounted(() => {
             <!-- 空状态 -->
             <div v-else-if="messages.length === 0" class="text-center py-12">
               <div class="text-gray-400 mb-4">
-                <Send :size="48" class="mx-auto" />
+                <Send :size="48" class="mx-auto icon-bg-fill" />
               </div>
               <p class="text-gray-500 dark:text-gray-400">还没有消息，开始对话吧！</p>
               <p class="text-sm text-gray-400 dark:text-gray-500 mt-2">关于物品：{{ itemName }}</p>
@@ -536,9 +536,11 @@ onUnmounted(() => {
             <Button 
               @click="sendNewMessage"
               :disabled="!newMessage.trim() || isSending"
+              size="sm"
+              class="px-3"
             >
-              <Send :size="16" class="mr-2" />
-              {{ isSending ? '发送中...' : '发送' }}
+              <Loader2 v-if="isSending" :size="16" class="animate-spin icon-bg-fill" />
+              <Send v-else :size="16" class="icon-bg-fill" />
             </Button>
           </div>
         </div>
@@ -572,5 +574,10 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Lucide图标填充色与父容器背景一致的样式 */
+.icon-bg-fill {
+  fill: var(--bg-color, currentColor);
 }
 </style> 

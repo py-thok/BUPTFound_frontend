@@ -1,5 +1,4 @@
 import { ref, computed } from 'vue'
-// import * as mockData from '@/data/mockData.json'
 
 // 后端API配置
 const API_BASE_URL = ''
@@ -312,26 +311,13 @@ export const getTestAccountInfo = () => {
 
 // 获取用户profile信息的API调用
 export const getUserProfile = async (userId?: number): Promise<{ success: boolean; data?: User; message: string }> => {
-  console.log('开始获取用户资料，传入的 userId:', userId)
-  
-  try {
-    // 如果传入了userId，先检查mockData中是否有该用户
-    // if (userId) {
-    //   const users = mockData.users as User[]
-    //   const mockUser = users.find(user => user.id === userId)
-    //   
-    //   if (mockUser) {
-    //     console.log('从 mockData 找到用户:', mockUser)
-    //     return {
-    //       success: true,
-    //       data: mockUser,
-    //       message: '获取用户资料成功'
-    //     }
-    //   } else {
-    //     console.log('mockData 中未找到 userId:', userId)
-    //   }
-    // }
+  console.log('=== getUserProfile 被调用 ===')
+  console.log('参数 userId:', userId)
+  console.log('当前登录状态:', isLoggedIn.value)
+  console.log('当前用户:', currentUser.value)
 
+  try {
+    // 直接调用API获取用户信息
     // 构建API请求
     const endpoint = userId ? `/profile?id=${userId}` : '/profile'
     console.log('调用后端 API:', endpoint)

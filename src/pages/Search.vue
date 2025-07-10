@@ -473,7 +473,7 @@ onUnmounted(() => {
       <!-- 错误状态 -->
       <div v-else-if="errorMessage" class="text-center py-12">
         <div class="text-gray-400 mb-4">
-          <SearchIcon :size="48" class="mx-auto" />
+          <SearchIcon :size="48" class="mx-auto icon-bg-fill" />
         </div>
         <h3 class="text-lg font-medium text-red-600 dark:text-red-400 mb-2">搜索出错</h3>
         <p class="text-gray-600 dark:text-gray-300 mb-4">
@@ -488,7 +488,7 @@ onUnmounted(() => {
       <div v-else class="max-w-6xl mx-auto">
         <div v-if="filteredItems.length === 0 && (keyword || category !== 'all' || dateFilter)" class="text-center py-12">
           <div class="text-gray-400 mb-4">
-            <SearchIcon :size="48" class="mx-auto" />
+            <SearchIcon :size="48" class="mx-auto icon-bg-fill" />
           </div>
           <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">未找到相关物品</h3>
           <p class="text-gray-600 dark:text-gray-300 mb-4">
@@ -544,17 +544,17 @@ onUnmounted(() => {
               
               <div class="space-y-2 text-sm text-gray-600 dark:text-gray-300">
                 <div class="flex items-center gap-2">
-                  <MapPin :size="14" class="text-gray-400 dark:text-gray-500" />
+                  <MapPin :size="14" class="text-gray-400 dark:text-gray-500 icon-bg-fill" />
                   <span v-html="highlightKeywords(item.site)"></span>
                 </div>
                 <div class="flex items-center gap-2">
-                  <CalendarIcon :size="14" class="text-gray-400 dark:text-gray-500" />
+                  <CalendarIcon :size="14" class="text-gray-400 dark:text-gray-500 icon-bg-fill" />
                   <span>{{ item.date }}</span>
                 </div>
               </div>
               
               <Button class="w-full mt-4" size="sm" @click.stop="goToPost(item.id)">
-                <Eye :size="14" class="mr-2" />
+                <Eye :size="14" class="mr-2 icon-bg-fill" />
                 查看详情
               </Button>
             </CardContent>
@@ -580,6 +580,11 @@ onUnmounted(() => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* Lucide图标填充色与父容器背景一致的样式 */
+.icon-bg-fill {
+  fill: var(--bg-color, currentColor);
 }
 
 /* 自定义滚动提示动画 */

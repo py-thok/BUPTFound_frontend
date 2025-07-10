@@ -49,7 +49,7 @@
           size="sm"
           class="h-8 w-8 p-0"
         >
-          <X :size="16" />
+          <X :size="16" class="icon-bg-fill" />
         </Button>
         
         <!-- 筛选按钮 - 只有在搜索框获得焦点或已经打开筛选器时才显示 -->
@@ -61,7 +61,7 @@
           class="h-8 w-8 p-0 transition-all duration-200"
           :class="filtersOpen ? 'bg-blue-50 border-blue-300' : ''"
         >
-          <Filter :size="16" />
+          <Filter :size="16" class="icon-bg-fill" />
         </Button>
       </div>
     </div>
@@ -114,7 +114,7 @@
                 class="h-8 text-xs justify-start font-normal"
                 :class="dateRange ? 'bg-blue-50' : ''"
               >
-                <CalendarIcon :size="14" class="mr-2" />
+                <CalendarIcon :size="14" class="mr-2 icon-bg-fill" />
                 {{ dateRange ? '已选定' : '日期筛选' }}
               </Button>
             </PopoverTrigger>
@@ -141,7 +141,7 @@
           size="sm"
           class="h-8 text-xs"
         >
-          <X :size="14" class="mr-1" />
+          <X :size="14" class="mr-1 icon-bg-fill" />
           清除筛选
         </Button>
       </div>
@@ -160,7 +160,7 @@
         <Badge variant="destructive">寻找 {{ stats.lost }}</Badge>
       </div>
       <div v-if="keyword" class="flex items-center gap-1">
-        <Clock :size="14" />
+        <Clock :size="14" class="icon-bg-fill" />
         <span>搜索用时: 0.3s</span>
       </div>
     </div>
@@ -451,5 +451,10 @@ export default {
 <style scoped>
 .search-box-container {
   width: 100%;
+}
+
+/* Lucide图标填充色与父容器背景一致的样式 */
+.icon-bg-fill {
+  fill: var(--bg-color, currentColor);
 }
 </style> 

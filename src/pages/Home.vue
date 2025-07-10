@@ -8,7 +8,6 @@ import { useToast } from '@/components/ui/toast/use-toast'
 import { List, User, Plus, MapPin, Calendar, Phone, Sun, Moon, Eye, MessageSquare, Clock, ChevronLeft, ChevronRight, Sparkles } from 'lucide-vue-next'
 import { isLoggedIn, currentUser, initializeAuth, logout, getConversations, type ConversationSummary } from '@/stores/user'
 import { items, getAllItems, type Item, getUserSimilarItemSuggestions, type SimilarItemSuggestion, markSuggestionAsViewed } from '@/stores/items'
-// import * as mockData from '@/data/mockData.json'
 import { useTheme } from '@/composables/useTheme'
 import AppNavbar from '@/components/AppNavbar.vue'
 import SearchBox from '@/components/SearchBox.vue'
@@ -98,39 +97,19 @@ const pageNumbers = computed(() => {
 })
 
 const loadData = async () => {
-  // console.log('开始加载数据...')
-  
   try {
-    // 首先加载mockdata作为基础数据
-    // const mockItems = (mockData as any).items || []
-    // 初始化为空数组，准备接收API数据
-    // items.value = [...mockItems] // 使用展开运算符复制mockdata
     items.value = []
-    // console.log('初始加载mockdata:', mockItems.length, '条')
-    
-    // 然后获取API数据
-    // console.log('开始获取API数据...')
     const result = await getAllItems()
     
     if (result.success) {
-      // console.log('API数据获取成功，包含', result.data?.length || 0, '条数据')
-      
-      // 过滤掉与API数据重复的mockdata
-      // const apiItemIds = new Set(items.value.map(item => item.id))
-      // const filteredMockItems = mockItems.filter(mockItem => !apiItemIds.has(mockItem.id))
-      
-      // 将API数据（已在items.value中）和过滤后的mockdata合并
-      // items.value = [...items.value, ...filteredMockItems]
-      // console.log('API数据已更新到items.value')
-      // console.log('合并后的数据: API数据 +', filteredMockItems.length, '条mockdata =', items.value.length, '条总数据')
+      console.log('成功获取物品数据:', items.value.length, '条')
     } else {
-      // console.log('API获取失败，仅使用mockdata:', items.value.length, '条')
-      // console.log('API获取失败，没有数据显示')
+      console.error('API获取失败:', result.message)
+      items.value = []
     }
   } catch (error) {
-    // console.error('加载数据时出现异常:', error)
-    // console.log('异常情况下仅使用mockdata:', items.value.length, '条')
-    // console.log('异常情况下没有数据显示')
+    console.error('获取物品数据异常:', error)
+    items.value = []
   }
 }
 
@@ -208,8 +187,6 @@ const goToSuggestedPost = async (suggestion: SimilarItemSuggestion) => {
 onMounted(async () => {
   initializeAuth()
   
-  // console.log('=== 主页初始化 ===')
-  
   await loadData()
   
   // 如果用户已登录，加载相似物品推荐
@@ -219,8 +196,6 @@ onMounted(async () => {
   
   // 初始化显示数据
   displayedItems.value = paginatedItems.value
-  // console.log('最终显示的物品数量:', displayedItems.value.length)
-  // console.log('总物品数量:', items.value.length)
   
   // 监听滚动事件
   const handleScroll = () => {
@@ -362,14 +337,9 @@ const viewDetail = async (item: Item) => {
 // 跳转到用户页面
 const goToUserPage = (userId: number | undefined) => {
   if (!userId) {
-    // console.log('userId 为空，无法跳转')
     return
   }
   
-  // console.log('跳转到用户页面，userId:', userId)
-  // console.log('当前登录用户ID:', currentUser.value?.id)
-  
-  // 统一使用 /user?id= 格式
   router.push(`/user?id=${userId}`)
 }
 
@@ -381,11 +351,6 @@ const sendMessage = async (item: any) => {
   }
   
   try {
-    // console.log('开始私信处理，检查已有对话...', {
-    //   targetUserId: userId,
-    //   currentUserId: currentUser.value?.id
-    // })
-    
     // 首先获取用户的所有对话列表
     const conversationsResult = await getConversations()
     
@@ -398,8 +363,6 @@ const sendMessage = async (item: any) => {
       )
       
       if (existingConversation) {
-        // console.log('找到已存在的对话，直接跳转:', existingConversation)
-        
         // 跳转到已有对话
         router.push({
           path: '/message',
@@ -412,18 +375,13 @@ const sendMessage = async (item: any) => {
           }
         })
         return
-      } else {
-        // console.log('未找到已存在的对话，创建新对话')
       }
-    } else {
-      // console.log('获取对话列表失败，继续创建新对话:', conversationsResult.message)
     }
   } catch (error) {
     console.error('检查已有对话时异常:', error)
   }
   
   // 如果没有找到已存在的对话，或者检查失败，则创建新对话
-  // console.log('跳转到新建消息页面')
   router.push(`/message?userId=${item.userId}&userName=${item.userName}&itemId=${item.id}&itemName=${encodeURIComponent(item.title)}`)
 }
 
@@ -472,8 +430,8 @@ const formatTime = (dateString: string) => {
           size="sm"
           class="shadow-lg backdrop-blur-sm"
         >
-          <Sun v-if="isDark" :size="18" class="mr-1" />
-          <Moon v-else :size="18" class="mr-1" />
+          <Sun v-if="isDark" :size="18" class="mr-1 icon-bg-fill" />
+          <Moon v-else :size="18" class="mr-1 icon-bg-fill" />
         </Button>
       </div>
       
@@ -498,7 +456,7 @@ const formatTime = (dateString: string) => {
         <!-- 未读推荐提示（可选显示） -->
         <div v-if="isLoggedIn && unreadSuggestionsCount > 0" class="mb-6">
           <div class="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-full text-blue-700 text-sm">
-            <Sparkles :size="16" />
+            <Sparkles :size="16" class="icon-bg-fill" />
             <span>为您找到 {{ unreadSuggestionsCount }} 个您寻找的相似物品</span>
             <Button @click="showSuggestionsModal" variant="ghost" size="sm" class="text-blue-600 hover:text-blue-800">
               查看
@@ -516,8 +474,8 @@ const formatTime = (dateString: string) => {
               size="lg"
               class="px-8 py-3 rounded-full"
             >
-              <User :size="18" class="mr-2" />
-              登录注册
+              <User :size="18" class="mr-2 icon-bg-fill" />
+              登录\注册
             </Button>
           </template>
           
@@ -529,7 +487,7 @@ const formatTime = (dateString: string) => {
               size="lg"
               class="px-8 py-3 rounded-full"
             >
-              <Plus :size="18" class="mr-2" />
+              <Plus :size="18" class="mr-2 icon-bg-fill" />
               发布信息
             </Button>
           </template>
@@ -540,7 +498,7 @@ const formatTime = (dateString: string) => {
             size="lg"
             class="px-8 py-3 rounded-full"
           >
-            <List :size="18" class="mr-2" />
+            <List :size="18" class="mr-2 icon-bg-fill" />
             浏览全部
           </Button>
         </div>
@@ -616,11 +574,11 @@ const formatTime = (dateString: string) => {
                   </div>
                   <div class="flex items-center gap-4 text-sm text-gray-500">
                     <div class="flex items-center gap-1">
-                      <Calendar :size="14" />
+                      <Calendar :size="14" class="icon-bg-fill" />
                       {{ formatTime(item.createdAt || item.date) }}
                     </div>
                     <div class="flex items-center gap-1">
-                      <MapPin :size="14" />
+                      <MapPin :size="14" class="icon-bg-fill" />
                       {{ item.site }}
                     </div>
                   </div>
@@ -633,7 +591,7 @@ const formatTime = (dateString: string) => {
                 @click.stop="sendMessage(item)"
                 :disabled="currentUser?.id === item.userId"
               >
-                <MessageSquare :size="14" class="mr-2" />
+                <MessageSquare :size="14" class="mr-2 icon-bg-fill" />
                 {{ currentUser?.id === item.userId ? '私信' : '私信' }}
               </Button>
             </CardContent>
@@ -651,8 +609,8 @@ const formatTime = (dateString: string) => {
               size="sm"
               class="px-3 py-2"
             >
-              <ChevronLeft :size="16" />
-              <ChevronLeft :size="16" class="-ml-1" />
+              <ChevronLeft :size="16" class="icon-bg-fill" />
+              <ChevronLeft :size="16" class="-ml-1 icon-bg-fill" />
             </Button>
             
             <!-- 上一页按钮 -->
@@ -663,7 +621,7 @@ const formatTime = (dateString: string) => {
               size="sm"
               class="px-3 py-2"
             >
-              <ChevronLeft :size="16" class="mr-1" />
+              <ChevronLeft :size="16" class="mr-1 icon-bg-fill" />
               上一页
             </Button>
             
@@ -690,7 +648,7 @@ const formatTime = (dateString: string) => {
               class="px-3 py-2"
             >
               下一页
-              <ChevronRight :size="16" class="ml-1" />
+              <ChevronRight :size="16" class="ml-1 icon-bg-fill" />
             </Button>
             
             <!-- 末页按钮 -->
@@ -701,8 +659,8 @@ const formatTime = (dateString: string) => {
               size="sm"
               class="px-3 py-2"
             >
-              <ChevronRight :size="16" class="-mr-1" />
-              <ChevronRight :size="16" />
+              <ChevronRight :size="16" class="-mr-1 icon-bg-fill" />
+              <ChevronRight :size="16" class="icon-bg-fill" />
             </Button>
           </div>
         </div>
@@ -731,6 +689,11 @@ const formatTime = (dateString: string) => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* Lucide图标填充色与父容器背景一致的样式 */
+.icon-bg-fill {
+  fill: var(--bg-color, currentColor);
 }
 
 /* 自定义滚动提示动画 */

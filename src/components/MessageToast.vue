@@ -47,7 +47,7 @@
       @click.stop="$emit('close')"
       class="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors p-1 rounded"
     >
-      <X :size="16" />
+      <X :size="16" class="icon-bg-fill" />
     </button>
   </div>
 </template>

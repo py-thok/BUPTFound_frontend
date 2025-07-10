@@ -41,7 +41,7 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
-    path: '/messages',
+    path: '/mymessages',
     name: 'MessageList',
     component: () => import('../pages/MessageList.vue'),
     meta: { requiresAuth: true }

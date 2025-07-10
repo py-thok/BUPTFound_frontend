@@ -391,7 +391,7 @@ const handleDeleteItem = async (event: Event, itemId: number, itemTitle: string)
                 <div>
                   <CardTitle class="text-2xl">{{ targetUser.name }}</CardTitle>
                   <CardDescription class="flex items-center gap-1">
-                    <UserIcon :size="16" />
+                    <UserIcon :size="16" class="icon-bg-fill" />
                     @{{ targetUser.username }}
                   </CardDescription>
                 </div>
@@ -405,7 +405,7 @@ const handleDeleteItem = async (event: Event, itemId: number, itemTitle: string)
                   variant="outline"
                   size="sm"
                 >
-                  <Edit :size="16" class="mr-1" />
+                  <Edit :size="16" class="mr-1 icon-bg-fill" />
                   编辑资料
                 </Button>
                 
@@ -415,7 +415,7 @@ const handleDeleteItem = async (event: Event, itemId: number, itemTitle: string)
                     :disabled="isSaving"
                     size="sm"
                   >
-                    <Save :size="16" class="mr-1" />
+                    <Save :size="16" class="mr-1 icon-bg-fill" />
                     {{ isSaving ? '保存中...' : '保存' }}
                   </Button>
                   <Button 
@@ -424,7 +424,7 @@ const handleDeleteItem = async (event: Event, itemId: number, itemTitle: string)
                     size="sm"
                     :disabled="isSaving"
                   >
-                    <X :size="16" class="mr-1" />
+                    <X :size="16" class="mr-1 icon-bg-fill" />
                     取消
                   </Button>
                 </template>
@@ -492,7 +492,7 @@ const handleDeleteItem = async (event: Event, itemId: number, itemTitle: string)
                         variant="outline"
                         size="sm"
                       >
-                        <Upload :size="16" class="mr-1" />
+                        <Upload :size="16" class="mr-1 icon-bg-fill" />
                         上传头像
                       </Button>
                     </div>
@@ -609,15 +609,15 @@ const handleDeleteItem = async (event: Event, itemId: number, itemTitle: string)
                       <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-3">{{ item.description }}</p>
                       <div class="space-y-1 text-xs text-gray-500 dark:text-gray-400">
                         <div class="flex items-center gap-1">
-                          <MapPin :size="12" />
+                          <MapPin :size="12" class="icon-bg-fill" />
                           {{ item.location }}
                         </div>
                         <div class="flex items-center gap-1">
-                          <Calendar :size="12" />
+                          <Calendar :size="12" class="icon-bg-fill" />
                           {{ item.date }}
                         </div>
                         <div v-if="item.contact" class="flex items-center gap-1">
-                          <Phone :size="12" />
+                          <Phone :size="12" class="icon-bg-fill" />
                           {{ item.contact }}
                         </div>
                       </div>
@@ -631,4 +631,11 @@ const handleDeleteItem = async (event: Event, itemId: number, itemTitle: string)
       </div>
     </main>
   </div>
-</template> 
+</template>
+
+<style scoped>
+/* Lucide图标填充色与父容器背景一致的样式 */
+.icon-bg-fill {
+  fill: var(--bg-color, currentColor);
+}
+</style> 

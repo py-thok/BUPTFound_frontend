@@ -1,0 +1,88 @@
+/* 全局图标样式 - Lucide图标填充色与父容器背景一致 */
+
+/* 基础icon-bg-fill样式 */
+.icon-bg-fill {
+  fill: var(--bg-color, currentColor) !important;
+}
+
+/* 为不同容器类型设置背景色变量 */
+
+/* 默认白色背景容器 */
+.bg-white, .card-header-bg {
+  --bg-color: rgb(255 255 255);
+}
+
+/* 暗色模式背景容器 */
+.dark .bg-white, .dark .card-header-bg {
+  --bg-color: rgb(31 41 55);
+}
+
+/* 错误状态背景 */
+.error-state-bg {
+  --bg-color: rgb(254 242 242);
+}
+
+.dark .error-state-bg {
+  --bg-color: rgb(127 29 29);
+}
+
+/* 空状态背景 */
+.empty-state-bg {
+  --bg-color: rgb(249 250 251);
+}
+
+.dark .empty-state-bg {
+  --bg-color: rgb(55 65 81);
+}
+
+/* 按钮背景 */
+.bg-blue-50 {
+  --bg-color: rgb(239 246 255);
+}
+
+.dark .bg-blue-50 {
+  --bg-color: rgb(30 58 138);
+}
+
+/* 卡片背景 */
+.bg-gray-50 {
+  --bg-color: rgb(249 250 251);
+}
+
+.dark .bg-gray-50 {
+  --bg-color: rgb(55 65 81);
+}
+
+/* 主页面背景渐变 */
+.bg-gradient-to-br {
+  --bg-color: rgb(249 250 251);
+}
+
+.dark .bg-gradient-to-br {
+  --bg-color: rgb(17 24 39);
+}
+
+/* 导航栏背景 */
+.bg-white\/80 {
+  --bg-color: rgba(255, 255, 255, 0.8);
+}
+
+.dark .bg-white\/80 {
+  --bg-color: rgba(31, 41, 55, 0.8);
+}
+
+/* 通用图标颜色样式 */
+.icon-fill-current {
+  fill: currentColor !important;
+}
+
+.icon-fill-parent-bg {
+  fill: var(--bg-color, currentColor) !important;
+}
+
+/* 图标颜色适配工具类 */
+.icon-adaptive {
+  --icon-color: var(--bg-color, currentColor);
+  color: var(--icon-color);
+  fill: var(--icon-color);
+} 

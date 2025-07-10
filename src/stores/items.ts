@@ -1,6 +1,6 @@
 import { ref } from 'vue'
-// import * as mockData from '@/data/mockData.json'
 import { currentUser, logout } from './user'
+import type { User } from './user'
 
 // 后端API配置
 const API_BASE_URL = ''
@@ -78,9 +78,14 @@ export interface MarkViewedResponse {
   [property: string]: any;
 }
 
-// 全局物品状态
-// export const items = ref<Item[]>((mockData as any).items || [])
+// 全局物品数据存储
 export const items = ref<Item[]>([])
+
+// 定义物品状态枚举
+export type ItemStatus = 'active' | 'resolved'
+
+// 定义物品类型枚举
+export type ItemType = 'found' | 'lost'
 
 // 创建物品的API调用
 export const createItem = async (itemData: CreateItemRequest): Promise<{ success: boolean; data?: ItemResponse; message: string }> => {
@@ -470,40 +475,22 @@ export const getAllItems = async (): Promise<{ success: boolean; data?: ItemResp
 
 // 获取单个物品信息
 export const getItemById = async (id: number): Promise<{ success: boolean; data?: Item; message: string }> => {
+  console.log('=== getItemById 被调用 ===')
+  console.log('查找ID:', id)
+  
   try {
-    console.log('获取物品信息，ID:', id)
-    
-    // 先从本地mock数据中查找
-    // const mockItem = mockData.items.find(item => item.id === id)
-    // if (mockItem) {
-    //   console.log('从mock数据中找到物品:', mockItem)
-    //   
-    //   // 确保返回的数据符合Item接口
-    //   const formattedItem: Item = {
-    //     id: mockItem.id,
-    //     title: mockItem.title,
-    //     description: mockItem.description,
-    //     type: mockItem.type as 'found' | 'lost',
-    //     status: (mockItem.status as 'active' | 'resolved') || 'active',
-    //     location: mockItem.location,
-    //     site: mockItem.site,
-    //     contact: mockItem.contact,
-    //     date: mockItem.date,
-    //     image: mockItem.image,
-    //     userId: mockItem.userId,
-    //     userName: mockItem.userName,
-    //     userAvatar: mockItem.userAvatar,
-    //     createdAt: mockItem.createdAt
-    //   }
-    //   
-    //   return {
-    //     success: true,
-    //     data: formattedItem,
-    //     message: '获取成功'
-    //   }
-    // }
-    
-    // 如果mock数据中没有，尝试从API获取
+    // 首先检查本地缓存的物品数据
+    const cachedItem = items.value.find(item => item.id === id)
+    if (cachedItem) {
+      console.log('从本地缓存中找到物品:', cachedItem)
+      return {
+        success: true,
+        data: cachedItem,
+        message: '成功获取物品信息（来源：本地缓存）'
+      }
+    }
+
+    // 如果本地缓存中没有，尝试从API获取
     const token = localStorage.getItem('token')
     if (!token) {
       return {

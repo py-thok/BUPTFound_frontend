@@ -9,7 +9,7 @@
           size="sm" 
           :class="modelValue ? 'bg-blue-50' : ''"
         >
-          <MapPin class="h-4 w-4 mr-1" />
+          <MapPin :size="16" class="mr-2 icon-bg-fill" />
           {{ modelValue ? '已选定' : '位置筛选' }}
         </Button>
       </PopoverTrigger>
@@ -29,7 +29,7 @@
           >
             <!-- 地图加载状态遮罩 -->
             <div v-if="mapLoading" class="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-10">
-              <Loader2 class="h-8 w-8 animate-spin" />
+              <Loader2 :size="24" class="animate-spin text-blue-600 icon-bg-fill" />
               <span class="ml-2">地图加载中...</span>
             </div>
             

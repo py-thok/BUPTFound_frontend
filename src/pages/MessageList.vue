@@ -225,7 +225,7 @@ onUnmounted(() => {
     <!-- 导航栏 -->
     <AppNavbar 
       :page-title="'消息列表'"
-      :current-page="'messages'"
+      :current-page="'mymessages'"
       :show-back-button="true"
       :is-scroll-navbar="false"
       :show-navbar="true"
@@ -233,10 +233,10 @@ onUnmounted(() => {
 
     <div class="container mx-auto px-4 py-8">
       <Card class="max-w-4xl mx-auto">
-        <CardHeader>
+        <CardHeader class="card-header-bg">
           <div class="flex items-center justify-between">
             <CardTitle class="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-              <MessageCircle :size="24" fill="currentColor" />
+              <MessageCircle :size="24" class="icon-bg-fill" />
               私信对话
               <!-- 轮询状态指示器 -->
               <div v-if="isPolling" class="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
@@ -261,7 +261,7 @@ onUnmounted(() => {
                 :disabled="isLoading"
                 class="p-2"
               >
-                <RefreshCw :class="{ 'animate-spin': isLoading }" class="h-4 w-4" />
+                <RefreshCw :class="{ 'animate-spin': isLoading }" class="h-4 w-4 icon-bg-fill" />
               </Button>
             </div>
           </div>
@@ -281,9 +281,9 @@ onUnmounted(() => {
           </div>
           
           <!-- 错误状态 -->
-          <div v-else-if="hasError" class="text-center py-12">
+          <div v-else-if="hasError" class="text-center py-12 error-state-bg">
             <div class="text-red-400 mb-4">
-              <MessageCircle :size="48" class="mx-auto text-red-400" />
+              <MessageCircle :size="48" class="mx-auto icon-bg-fill" />
             </div>
             <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">加载失败</h3>
             <p class="text-gray-600 dark:text-gray-300 mb-4">{{ errorMessage }}</p>
@@ -296,9 +296,9 @@ onUnmounted(() => {
           </div>
           
           <!-- 空状态 -->
-          <div v-else-if="!hasConversations" class="text-center py-12">
+          <div v-else-if="!hasConversations" class="text-center py-12 empty-state-bg">
             <div class="text-gray-400 mb-4">
-              <MessageCircle :size="48" class="mx-auto text-gray-400" />
+              <MessageCircle :size="48" class="mx-auto icon-bg-fill" />
             </div>
             <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">还没有私信</h3>
             <p class="text-gray-500 dark:text-gray-400 mb-6">您还没有与其他用户的私信对话</p>
@@ -346,7 +346,7 @@ onUnmounted(() => {
                   </div>
                   <div class="flex items-center gap-2">
                     <span class="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                      <Clock :size="12" />
+                      <Clock :size="12" class="icon-bg-fill" />
                       {{ formatTime(conversation.lastMessageTime) }}
                     </span>
                   </div>
@@ -354,7 +354,7 @@ onUnmounted(() => {
                 
                 <!-- 物品信息 -->
                 <div class="flex items-center gap-2 mb-2">
-                  <Package :size="14" class="text-blue-600 dark:text-blue-400" />
+                  <Package :size="14" class="text-blue-600 dark:text-blue-400 icon-bg-fill" />
                   <span class="text-sm text-blue-700 dark:text-blue-300 font-medium truncate">{{ conversation.itemName }}</span>
                   <Badge 
                     v-if="getItemData(conversation.itemId)"
@@ -387,5 +387,41 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Lucide图标填充色与父容器背景一致的样式 */
+.icon-bg-fill {
+  /* 让图标填充色继承父容器的背景色 */
+  fill: var(--bg-color, currentColor);
+}
+
+/* 为不同的容器设置背景色变量 */
+.card-header-bg {
+  --bg-color: rgb(255 255 255); /* 白色背景 */
+}
+
+.dark .card-header-bg {
+  --bg-color: rgb(31 41 55); /* 暗色模式背景 */
+}
+
+.error-state-bg {
+  --bg-color: rgb(254 242 242); /* 红色背景的浅色版本 */
+}
+
+.dark .error-state-bg {
+  --bg-color: rgb(127 29 29); /* 暗色模式红色背景 */
+}
+
+.empty-state-bg {
+  --bg-color: rgb(249 250 251); /* 灰色背景 */
+}
+
+.dark .empty-state-bg {
+  --bg-color: rgb(55 65 81); /* 暗色模式灰色背景 */
+}
+
+/* 另一种方法：直接使用背景色作为填充色 */
+.fill-parent-bg svg {
+  fill: rgb(var(--parent-bg-rgb, 255 255 255));
 }
 </style> 

@@ -359,8 +359,8 @@ onMounted(() => {
               
               <div class="flex flex-col">
                 <div class="font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors" @click="handleUserClick()">{{ post?.userName || '匿名用户' }}</div>
-                <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                  <Clock :size="14" />
+                <div class="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+                  <Clock :size="14" class="icon-bg-fill" />
                   <span>{{ formatTime(post?.createdAt || post?.date || '') }}</span>
                 </div>
               </div>
@@ -368,11 +368,11 @@ onMounted(() => {
             <!-- 操作按钮 -->
             <div class="flex gap-3">
               <Button @click="sendMessage" v-if="!isAuthor">
-                <MessageSquare :size="16" class="mr-2" />
+                <MessageSquare :size="16" class="mr-2 icon-bg-fill" />
                 私信
               </Button>
               <Button @click="handleEdit" v-if="isAuthor" variant="outline" >
-                <Edit :size="16" class="mr-2" />
+                <Edit :size="16" class="mr-2 icon-bg-fill" />
                 修改
               </Button>
             </div>
@@ -387,8 +387,8 @@ onMounted(() => {
           <!-- 详细信息 -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div class="space-y-3">
-              <div class="flex items-center gap-3 text-gray-600 dark:text-gray-300">
-                <MapPin :size="18" class="text-gray-400 dark:text-gray-500" />
+              <div class="flex items-center gap-1 text-gray-600 dark:text-gray-300">
+                <MapPin :size="18" class="text-gray-400 dark:text-gray-500 icon-bg-fill" />
                 <span class="font-medium"></span>
                 <span>{{ post?.site }}</span>
                 <!-- 查看精确位置按钮 -->
@@ -399,7 +399,7 @@ onMounted(() => {
                   size="sm"
                   class="ml-2 h-7 px-2"
                 >
-                  <Map :size="14" class="mr-1" />
+                  <Map :size="14" class="mr-1 icon-bg-fill" />
                   {{ showMap ? '收起位置' : '查看精确位置' }}
                 </Button>
               </div>
@@ -410,11 +410,11 @@ onMounted(() => {
           <div v-if="showMap" class="mb-6 border-t pt-6 dark:border-gray-700">
             <div class="flex items-center justify-between mb-4">
               <h3 class="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                <Map :size="18" />
+                <Map :size="18" class="icon-bg-fill" />
                 精确位置
               </h3>
               <Button @click="closeMap" variant="ghost" size="sm" class="p-1">
-                <X :size="16" />
+                <X :size="16" class="icon-bg-fill" />
               </Button>
             </div>
             

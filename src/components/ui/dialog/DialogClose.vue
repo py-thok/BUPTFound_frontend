@@ -6,6 +6,6 @@ const props = defineProps<DialogCloseProps>()
 
 <template>
   <DialogClose v-bind="props">
-    <slot />
+    <X class="h-4 w-4 icon-bg-fill" />
   </DialogClose>
 </template>

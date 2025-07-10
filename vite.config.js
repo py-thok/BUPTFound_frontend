@@ -3,7 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 
 // API 基础地址
-const API_BASE_URL = 'http://127.0.0.1:8080'
+const API_BASE_URL = ''
 
 // https://vitejs.dev/config/
 export default defineConfig({
